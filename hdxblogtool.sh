@@ -158,6 +158,11 @@ function make_read_only {
     find $blogdir -type f -exec chmod 644 {} \;
 }
 
+function update {
+    curl -s -o /srv/hdxblogtool.sh https://bitbucket.org/teodorescuserban/hdx-tools/raw/master/hdxblogtool.sh
+    chown +x /srv/hdxblogtool.sh
+}
+
 server=${HDX_BACKUP_SERVER}
 user=${HDX_BACKUP_USER}
 srcdir=${HDX_BACKUP_BASE_DIR}
@@ -186,6 +191,8 @@ elif [ "$1" == "rw" ]; then
     make_read_write;
 elif [ "$1" == "ro" ]; then
     make_read_only;
+elif [ "$1" == "update" ]; then
+    update;
 else
     me=$(basename $0)
     echo -en "\nUsage: $me [restore|cleanup|backup|rw|ro]\n\n"
