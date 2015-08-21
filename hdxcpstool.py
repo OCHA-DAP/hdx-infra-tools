@@ -459,7 +459,8 @@ def restore_cleanup():
 
 
 def update():
-    line = ['curl', '-s', '-o', '/srv/hdxcpstool.py', 'https://bitbucket.org/teodorescuserban/hdx-tools/raw/master/hdxcpstool.py']
+    srcfile = 'https://bitbucket.org/teodorescuserban/hdx-tools/raw/master/hdxckantool.py'
+    line = ['curl', '-s', '-o', os.path.realpath(__file__), srcfile]
     try:
         subprocess.call(line)
     except:

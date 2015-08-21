@@ -897,7 +897,8 @@ def tests_nose(dirname):
 
 
 def update():
-    line = ['curl', '-s', '-o', '/srv/hdxckantool.py', 'https://bitbucket.org/teodorescuserban/hdx-tools/raw/master/hdxckantool.py']
+    srcfile = 'https://bitbucket.org/teodorescuserban/hdx-tools/raw/master/hdxckantool.py'
+    line = ['curl', '-s', '-o', os.path.realpath(__file__), srcfile]
     try:
         subprocess.call(line)
     except:
@@ -1146,6 +1147,7 @@ def main():
 if __name__ == '__main__':
     opts = sys.argv
     script = opts.pop(0)
+    print(os.path.realpath(__file__))
     if len(opts) == 0:
         exit(1)
     main()
