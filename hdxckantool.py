@@ -195,17 +195,6 @@ def control(cmd):
         exit(1)
 
 
-def update():
-    line = ['curl', '-s', '-o', '/srv/hdxckantool.py', 'https://bitbucket.org/teodorescuserban/hdx-tools/raw/master/hdxckantool.py']
-    try:
-        subprocess.call(line)
-    except:
-        print('Update failed.')
-        exit(1)
-    else:
-        print('Update completed.')
-
-
 def db():
     # db
     #  clean
@@ -590,7 +579,7 @@ def decompress_file(f_in='', f_out='', remove=False):
             with open(f_out, 'wb') as file_out:
                 file_out.writelines(file_in)
     except IOError:
-        sys.stdout.write('Error compressing ' + f_in + ' ... Please try again.\n')
+        sys.stdout.write('Error decompressing ' + f_in + ' ... Please try again.\n')
         sys.stdout.flush()
     else:
         if remove:
@@ -894,6 +883,17 @@ def tests_nose(dirname):
     subprocess.call(test_call)
 
 
+def update():
+    line = ['curl', '-s', '-o', '/srv/hdxckantool.py', 'https://bitbucket.org/teodorescuserban/hdx-tools/raw/master/hdxckantool.py']
+    try:
+        subprocess.call(line)
+    except:
+        print('Update failed.')
+        exit(1)
+    else:
+        print('Update completed.')
+
+
 def users():
     if len(opts) == 0:
         exit(1)
@@ -1122,8 +1122,8 @@ def main():
         tracking_update()
     elif cmd == 'user':
         users()
-    elif cmd == 'bz':
-        print('bzzz')
+    elif cmd == 'update':
+        update()
     else:
         exit(1)
 

@@ -7,7 +7,7 @@ import datetime
 import subprocess
 import psycopg2
 import gzip
-from shutil import rmtree,copyfile
+from shutil import rmtree, copyfile
 
 #import argparse
 #from docopt import docopt
@@ -16,7 +16,7 @@ from shutil import rmtree,copyfile
 APP = 'cps'
 #
 SRCDIR = '/srv/deploy/cps'
-TARGETDIR= SRCDIR + '/HDX-System'
+TARGETDIR = SRCDIR + '/HDX-System'
 TOMCATDIR = '/srv/tomcat'
 APPDIR = TOMCATDIR + '/webapps'
 # for deployment (might employ tags - unsuitable for backup)
@@ -26,23 +26,29 @@ BACKUP_AS = os.getenv('HDX_TYPE')
 TS = ''
 
 SQL = dict(
-    SUPERUSER  = "cps", HOST = str(os.getenv('HDX_CPSDB_ADDR')), PORT = str(os.getenv('HDX_CPSDB_PORT')), USER = str(os.getenv('HDX_CPSDB_USER')), PASSWORD = str(os.getenv('HDX_CPSDB_PASS')), DB = str(os.getenv('HDX_CPSDB_DB'))
+    SUPERUSER='cps', HOST=str(os.getenv('HDX_CPSDB_ADDR')),
+    PORT=str(os.getenv('HDX_CPSDB_PORT')),
+    USER=str(os.getenv('HDX_CPSDB_USER')),
+    PASSWORD=str(os.getenv('HDX_CPSDB_PASS')),
+    DB=str(os.getenv('HDX_CPSDB_DB'))
 )
 
 # to get the snapshot
 RESTORE = dict(
-    FROM = 'prod', 
-    SERVER = os.getenv('HDX_BACKUP_SERVER'), USER = os.getenv('HDX_BACKUP_USER'), DIR = os.getenv('HDX_BACKUP_BASE_DIR'),
-    TMP_DIR = "/tmp/cps-restore",
+    FROM='prod',
+    SERVER=os.getenv('HDX_BACKUP_SERVER'),
+    USER=os.getenv('HDX_BACKUP_USER'),
+    DIR=os.getenv('HDX_BACKUP_BASE_DIR'),
+    TMP_DIR='/tmp/cps-restore'
 )
 RESTORE['DIR'] = os.getenv('HDX_BACKUP_BASE_DIR') + '/' + RESTORE['FROM']
-RESTORE['PREFIX']= RESTORE['FROM'] + '.' + APP
+RESTORE['PREFIX'] = RESTORE['FROM'] + '.' + APP
 RESTORE['DB_PREFIX'] = RESTORE['PREFIX'] + '.db'
 RESTORE['DB_PREFIX_MAIN'] = RESTORE['DB_PREFIX'] + '.' + SQL['DB']
 
 BACKUP = dict(
-    AS = BACKUP_AS,
-    DIR = '/srv/backup',
+    AS=BACKUP_AS,
+    DIR='/srv/backup',
 )
 BACKUP['PREFIX'] = BACKUP['AS'] + '.' + APP
 BACKUP['DB_PREFIX'] = BACKUP['PREFIX'] + '.db'
@@ -54,12 +60,12 @@ CURRPATH = os.getcwd()
 
 
 def show_usage():
-    doc="""
+    doc = """
     Usage:
 
         hdxcpstool CMD [SUBCMD] [OPTIONS]
 
-    Commands, subcommands and options: 
+    Commands, subcommands and options:
         backup [quiet]- backup cps db, datastore db and filestore
         db
             clean     - empty the database
@@ -74,8 +80,10 @@ def show_usage():
             cleanup   - remove temporary folder used for restore
         start         - start ckan service
         stop          - stop ckan service
+        update        - update this tool (directly from repo source)
     """
     print(doc)
+
 
 def query_yes_no(question, default="yes"):
     """Ask a yes/no question via raw_input() and return their answer.
@@ -109,12 +117,13 @@ def query_yes_no(question, default="yes"):
             sys.stdout.write("Please respond with 'yes' or 'no' "
                              "(or 'y' or 'n').\n")
 
+
 def get_input(text='what?', lower=True, empty=''):
     sys.stdout.flush()
     if lower:
         text = text + ' (case insensitive)'
     if empty:
-        text = text + ' [' + empty +']'
+        text = text + ' [' + empty + ']'
     sys.stdout.write(text + ': ')
     result = input().strip()
     if lower:
@@ -123,6 +132,7 @@ def get_input(text='what?', lower=True, empty=''):
         result = empty
     return result
 
+
 def control(cmd):
     line = ["sv", cmd, APP]
     try:
@@ -130,6 +140,7 @@ def control(cmd):
     except:
         print(cmd + " failed.")
         exit(1)
+
 
 def db():
     # db
@@ -164,23 +175,25 @@ def db():
         for file in os.listdir(RESTORE['TMP_DIR']):
             archive_full_path = os.path.join(RESTORE['TMP_DIR'], file)
             file_full_path = archive_full_path.replace('.gz', '')
-            decompress_file(archive_full_path,file_full_path,True)
+            decompress_file(archive_full_path, file_full_path, True)
             if file.startswith(RESTORE['DB_PREFIX'] + '.' + SQL['DB']):
                 # restore main db
-                db_restore(file_full_path,SQL['DB'])
+                db_restore(file_full_path, SQL['DB'])
             else:
                 print("I don't know what to do with the file", file)
                 print('Skipping...')
         control('start')
     exit(0)
 
+
 def db_clean(dbcps=SQL['DB']):
     db_drop(dbcps)
     db_create(dbcps)
 
-def db_list_backups(listonly=True,ts=TODAY,server=RESTORE['SERVER'],directory=RESTORE['DIR'],user=RESTORE['USER'],cpsdb=SQL['DB']):
+
+def db_list_backups(listonly=True, ts=TODAY, server=RESTORE['SERVER'], directory=RESTORE['DIR'], user=RESTORE['USER'], cpsdb=SQL['DB']):
     if listonly:
-        line = ["rsync", '--list-only', user + '@' + server + ':' + directory + '/' + RESTORE['DB_PREFIX'] + '*' + ts + '*' ]
+        line = ["rsync", '--list-only', user + '@' + server + ':' + directory + '/' + RESTORE['DB_PREFIX'] + '*' + ts + '*']
     else:
         line = ["rsync", "-a", "--progress", user + '@' + server + ':' + directory + '/' + RESTORE['DB_PREFIX'] + '*' + ts + '*', RESTORE['TMP_DIR'] + '/']
         # empty the temp dir first.
@@ -194,31 +207,30 @@ def db_list_backups(listonly=True,ts=TODAY,server=RESTORE['SERVER'],directory=RE
         else:
             result = subprocess.call(line, stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError as exc:
-        print('+++++++++++++++++++++++++++++++++++++++++++++++++++++')                                                                                                   
+        print('+++++++++++++++++++++++++++++++++++++++++++++++++++++')
         print("Can't find archives from", ts, "or can't connect.")
         print('The error encountered was:')
-        print('+++++++++++++++++++++++++++++++++++++++++++++++++++++')                                                                                                   
+        print('+++++++++++++++++++++++++++++++++++++++++++++++++++++')
         print(str(exc.output.decode("utf-8").strip()))
-        print('+++++++++++++++++++++++++++++++++++++++++++++++++++++')                                                                                                   
+        print('+++++++++++++++++++++++++++++++++++++++++++++++++++++')
         q = 'Would you like to search again?'
         if not query_yes_no(q, default='no'):
             print("Aborting restore operation.")
             exit(0)
         return False
     if listonly:
-        print('+++++++++++++++++++++++++++++++++++++++++++++++++++++')                                                                                                   
+        print('+++++++++++++++++++++++++++++++++++++++++++++++++++++')
         print('Listing backups found:')
-        print('+++++++++++++++++++++++++++++++++++++++++++++++++++++')                                                                                                   
+        print('+++++++++++++++++++++++++++++++++++++++++++++++++++++')
         result = result.decode("utf-8").rstrip('\n\n')
         print(("Output: \n{}\n".format(result)))
-        print('+++++++++++++++++++++++++++++++++++++++++++++++++++++')                                                                                                   
+        print('+++++++++++++++++++++++++++++++++++++++++++++++++++++')
     return result
 
+
 def db_get_last_backup():
-    list = db_list_backups().split('\n')
-    list_db = []
     backup = []
-    for line in list:
+    for line in db_list_backups().split('\n'):
         print(line)
         name = line.split()[4]
         if name.startswith(RESTORE['DB_PREFIX'] + '.' + SQL['DB']):
@@ -226,18 +238,19 @@ def db_get_last_backup():
     ts = ''
     if len(backup) != 1:
         print("Error. Aborting...")
-        exit(0)        
+        exit(0)
     print('Trying to get for you the following backup:')
     print(backup[0])
-    print('+++++++++++++++++++++++++++++++++++++++++++++++++++++')                                                                                                   
+    print('+++++++++++++++++++++++++++++++++++++++++++++++++++++')
     db_list_backups(False)
-    print('+++++++++++++++++++++++++++++++++++++++++++++++++++++')                                                                                                   
+    print('+++++++++++++++++++++++++++++++++++++++++++++++++++++')
     print('Done. Backup is available in', RESTORE['TMP_DIR'])
-    print('+++++++++++++++++++++++++++++++++++++++++++++++++++++')                                                                                                   
+    print('+++++++++++++++++++++++++++++++++++++++++++++++++++++')
     global TS
     TS = ts
 
-def db_restore(filename='',db=''):
+
+def db_restore(filename='', db=''):
     if not filename or not db:
         print('No filename to restore from or no db found. Aborting...')
         exit(0)
@@ -245,13 +258,14 @@ def db_restore(filename='',db=''):
     db_create(db)
     print('Restoring database', db, 'from', filename)
     print('This may take a while...')
-    cmd = [ 'pg_restore', '-vOx', '-h', SQL['HOST'], '-p', SQL['PORT'], '-U', SQL['USER'], '-d', db, filename ]
+    cmd = ['pg_restore', '-vOx', '-h', SQL['HOST'], '-p', SQL['PORT'], '-U', SQL['USER'], '-d', db, filename]
     with open(os.devnull, 'wb') as devnull:
         subprocess.call(cmd, stdout=devnull, stderr=subprocess.STDOUT)
 
+
 def deploy():
     # get tag/branch
-    print("changing dir to "+ SRCDIR)
+    print("changing dir to ", SRCDIR)
     os.chdir(SRCDIR)
     print('fetching branch or tag', BRANCH)
     cmd_line = ['git', 'fetch']
@@ -286,10 +300,12 @@ def deploy():
         print('done. starting', APP)
         control('start')
 
-def backup(verbose=True):
-    backup_db(SQL['DB'], BACKUP['DB_PREFIX'],verbose)
 
-def backup_db(db='', prefix='',verbose=True):
+def backup(verbose=True):
+    backup_db(SQL['DB'], BACKUP['DB_PREFIX'], verbose)
+
+
+def backup_db(db='', prefix='', verbose=True):
     if not db or not prefix:
         print('backup_db called with empty archive or prefix')
         exit(0)
@@ -320,7 +336,8 @@ def backup_db(db='', prefix='',verbose=True):
             sys.stdout.write(archive_name + ' not found\n')
             sys.stdout.flush()
 
-def decompress_file(f_in='', f_out='',remove=False):
+
+def decompress_file(f_in='', f_out='', remove=False):
     if not f_in:
         return False
     if not f_out:
@@ -328,16 +345,17 @@ def decompress_file(f_in='', f_out='',remove=False):
     try:
         with gzip.open(f_in, 'rb') as file_in:
             with open(f_out, 'wb') as file_out:
-                file_out.writelines(file_in)        
+                file_out.writelines(file_in)
     except IOError:
-        sys.stdout.write('Error compressing ' + f_in + ' ... Please try again.\n')
+        sys.stdout.write('Error decompressing ' + f_in + ' ... Please try again.\n')
         sys.stdout.flush()
     else:
         if remove:
             # print(f_in)
             os.remove(f_in)
 
-def compress_file(f_in='', f_out='',remove=False):
+
+def compress_file(f_in='', f_out='', remove=False):
     if not f_in:
         return False
     if not f_out:
@@ -345,7 +363,7 @@ def compress_file(f_in='', f_out='',remove=False):
     try:
         with open(f_in, 'rb') as file_in:
             with gzip.open(f_out, 'wb') as file_out:
-                file_out.writelines(file_in)        
+                file_out.writelines(file_in)
     except IOError:
         sys.stdout.write('Error compressing ' + f_in + ' ... Please try again.\n')
         sys.stdout.flush()
@@ -354,18 +372,21 @@ def compress_file(f_in='', f_out='',remove=False):
             # print(f_in)
             os.remove(f_in)
 
+
 def db_test_refresh():
     for dbname in [SQL['DB_TEST'], SQL['DB_DATASTORE_TEST']]:
         db_drop(dbname)
         db_create(dbname)
 
+
 def db_connect_to_postgres(host=SQL['HOST'], port=SQL['PORT'], dbname='postgres', user=SQL['SUPERUSER']):
     try:
-        con=psycopg2.connect(host=host, port=port, database=dbname, user=user)
+        con = psycopg2.connect(host=host, port=port, database=dbname, user=user)
     except:
         print("I am unable to connect to the database, exiting.")
-        exit(2) 
+        exit(2)
     return con
+
 
 def db_drop(dbname):
     con = db_connect_to_postgres()
@@ -380,6 +401,7 @@ def db_drop(dbname):
         print("I can't drop database " + dbname)
     finally:
         con.close()
+
 
 def db_create(dbname, owner=SQL['USER']):
     # list databases
@@ -399,6 +421,7 @@ def db_create(dbname, owner=SQL['USER']):
         exit(2)
     finally:
         con.close()
+
 
 def refresh_pgpass():
     pgpass = '/root/.pgpass'
@@ -431,17 +454,31 @@ def refresh_pgpass():
         print('Permissions were incorrect. Fixed.')
     print('Done.')
 
+
 def restore_cleanup():
     print('Cleaning up temporary directory used for restore (' + RESTORE['TMP_DIR'] + ')')
     if os.path.isdir(RESTORE['TMP_DIR']):
         rmtree(RESTORE['TMP_DIR'])
     print('Done.')
 
+
+def update():
+    line = ['curl', '-s', '-o', '/srv/hdxcpstool.py', 'https://bitbucket.org/teodorescuserban/hdx-tools/raw/master/hdxcpstool.py']
+    try:
+        subprocess.call(line)
+    except:
+        print('Update failed.')
+        exit(1)
+    else:
+        print('Update completed.')
+
+
 def exit(code=0):
     if code == 1:
         show_usage()
     os.chdir(CURRPATH)
     sys.exit(code)
+
 
 def main():
     cmd = opts.pop(0)
@@ -470,14 +507,15 @@ def main():
             control('start')
         else:
             control(cmd)
-    elif cmd == 'bz':
-        print('bzzz')
+    elif cmd == 'update':
+        update()
     else:
         exit(1)
 
+
 if __name__ == '__main__':
-    opts=sys.argv
-    script=opts.pop(0)
+    opts = sys.argv
+    script = opts.pop(0)
     if len(opts) == 0:
         exit(1)
     main()
