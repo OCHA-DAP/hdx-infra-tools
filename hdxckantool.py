@@ -27,17 +27,21 @@ INI_FILE = "/srv/prod.ini"
 TS = ''
 
 SQL = dict(
-    SUPERUSER = "ckan", HOST = str(os.getenv('HDX_CKANDB_ADDR')), PORT = str(os.getenv('HDX_CKANDB_PORT')), USER = "ckan", PASSWORD = "ckan", DB = "ckan",
-    USER_DATASTORE = "datastore", DB_DATASTORE = "datastore",
-    DB_TEST = "ckan_test", DB_DATASTORE_TEST = "datastore_test"
+    SUPERUSER="ckan", HOST=str(os.getenv('HDX_CKANDB_ADDR')),
+    PORT=str(os.getenv('HDX_CKANDB_PORT')),
+    USER="ckan", PASSWORD="ckan", DB="ckan",
+    USER_DATASTORE="datastore", DB_DATASTORE="datastore",
+    DB_TEST="ckan_test", DB_DATASTORE_TEST="datastore_test"
 )
 
 # to get the snapshot
 RESTORE = dict(
-    FROM = 'prod', 
-    SERVER = str(os.getenv('HDX_BACKUP_SERVER')), USER = str(os.getenv('HDX_BACKUP_USER')),
-    TMP_DIR = "/tmp/ckan-restore",
+    FROM='prod',
+    SERVER=str(os.getenv('HDX_BACKUP_SERVER')),
+    USER=str(os.getenv('HDX_BACKUP_USER')),
+    TMP_DIR='/tmp/ckan-restore'
 )
+
 RESTORE['DIR'] = str(os.getenv('HDX_BACKUP_BASE_DIR')) + '/' + RESTORE['FROM']
 RESTORE['PREFIX'] = RESTORE['FROM'] + '.' + APP
 RESTORE['DB_PREFIX'] = RESTORE['PREFIX'] + '.db'
@@ -46,8 +50,8 @@ RESTORE['DB_PREFIX_DATASTORE'] = RESTORE['DB_PREFIX'] + '.' + SQL['DB_DATASTORE'
 RESTORE['FILESTORE_PREFIX'] = RESTORE['PREFIX'] + '.filestore'
 
 BACKUP = dict(
-    AS = BACKUP_AS,
-    DIR = '/srv/backup',
+    AS=BACKUP_AS,
+    DIR='/srv/backup'
 )
 BACKUP['PREFIX'] = BACKUP['AS'] + '.' + APP
 BACKUP['DB_PREFIX'] = BACKUP['PREFIX'] + '.db'
@@ -58,6 +62,7 @@ BACKUP['FILESTORE_PREFIX'] = BACKUP['PREFIX'] + '.filestore'
 SUFFIX = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
 TODAY = datetime.datetime.now().strftime('%Y%m%d')
 CURRPATH = os.getcwd()
+
 
 def show_usage():
     doc = """
@@ -121,6 +126,8 @@ def show_usage():
 
         tracking      - update tracking summary
 
+        update        - update this tool (directly from repo source)
+
         user
             add       - add user
             delete    - remove user
@@ -169,7 +176,7 @@ def get_input(text='what?', lower=True, empty=''):
     if lower:
         text = text + ' (case insensitive)'
     if empty:
-        text = text + ' [' + empty +']'
+        text = text + ' [' + empty + ']'
     sys.stdout.write(text + ': ')
     result = input().strip()
     if lower:
@@ -186,6 +193,17 @@ def control(cmd):
     except:
         print(cmd + " failed.")
         exit(1)
+
+
+def update():
+    line = ['curl', '-s', '-o', '/srv/hdxckantool.py', 'https://bitbucket.org/teodorescuserban/hdx-tools/raw/master/hdxckantool.py']
+    try:
+        subprocess.call(line)
+    except:
+        print('Update failed.')
+        exit(1)
+    else:
+        print('Update completed.')
 
 
 def db():
@@ -212,63 +230,6 @@ def db():
         db_set_perms()
     elif subcmd == 'get':
         db_get_last_backups()
-    # elif subcmd == 'restore':
-    #     q = 'Are you sure you want to overwrite ckan databases? '
-    #     if not query_yes_no(q, default='no'):
-    #         print("Aborting restore operation.")
-    #         exit(0)
-    #     db_get_last_backups()
-    #     # unzip the files
-    #     control('stop')
-    #     for file in os.listdir(RESTORE['TMP_DIR']):
-    #         archive_full_path = os.path.join(RESTORE['TMP_DIR'], file)
-    #         file_full_path = archive_full_path.replace('.gz', '')
-    #         decompress_file(archive_full_path,file_full_path,True)
-    #         if file.startswith(RESTORE['DB_PREFIX'] + '.' + SQL['DB']):
-    #             # restore main db
-    #             db_restore(file_full_path,SQL['DB'])
-    #         elif file.startswith(RESTORE['DB_PREFIX'] + '.' + SQL['DB_DATASTORE']):
-    #             # restore datastore db
-    #             db_restore(file_full_path,SQL['DB_DATASTORE'])
-    #             # restore permissions on datastore db
-    #             db_set_perms()
-    #         else:
-    #             print("I don't know what to do with the file", file)
-    #             print('Skipping...')
-    #     control('start')
-        # server = get_input('Backup server (hostname/IP)', False, RESTORE['SERVER'])
-        # directory = get_input('Backup directory (no trailing slash)', False, RESTORE['DIR'])
-        # user = get_input('Backup user', False, RESTORE['USER'])
-        # main_prefix = get_input('Main db prefix', False, BACKUP['DB_PREFIX'] + '.' + SQL['DB'])
-        # datastore_prefix = get_input('Datastore db prefix', False, BACKUP['DB_PREFIX'] + '.' + SQL['DB_DATASTORE'])
-        # filestore_prefix = get_input('Filestore prefix', False, BACKUP_FILESTORE_PREFIX)
-        # print('Current restore config:')
-        # print('Backup server: ' + server)
-        # print('Backup directory: ' + directory)
-        # print('Backup user: ' + user)
-        # print('Backup prefix for ckan db: ' + main_prefix)
-        # print('Backup prefix for datastore db: ' + datastore_prefix)
-        # # print 'Backup prefix for filestore archive: ' + filestore_prefix
-        # if not query_yes_no('Is this ok?', default='yes'):
-        #     print("Let's try again, shall we? Aborting...")
-        #     exit(0)
-        # backup = dict(server=server, directory=directory, user=user, ckandb=main_prefix, datastoredb=datastore_prefix)
-        # q = 'Do you want to restore the latest available backup?'
-        # if query_yes_no(q, default='yes'):
-        #     print("This is the last backup:")
-        #     db_list_backups(**backup)
-        #     q = 'Do I proceed with the restore?'
-        #     if query_yes_no(q, default='no'):
-        #         db_restore()
-        #     else:
-        #         print("Aborting...")
-        # else:
-        #     while True:
-        #         q = 'What is the date of the desired restore?(YYYYMMDD)'
-        #         ts = get_input(q)
-        #         if db_list_backups(ts=ts,**backup):
-        #             break
-
 
     exit(0)
 
@@ -283,7 +244,7 @@ def db_clean(dbckan=SQL['DB'], dbdatastore=SQL['DB_DATASTORE']):
 def db_set_perms():
     con = db_connect_to_postgres(dbname=SQL['DB_DATASTORE'])
     cur = con.cursor()
-    query_list=[
+    query_list = [
         'REVOKE CREATE ON SCHEMA public FROM PUBLIC;',
         'REVOKE USAGE ON SCHEMA public FROM PUBLIC;',
         'GRANT CREATE ON SCHEMA public TO ' + SQL['USER'] + ';',
@@ -293,7 +254,7 @@ def db_set_perms():
         'REVOKE CONNECT ON DATABASE ' + SQL['DB'] + ' FROM ' + SQL['USER_DATASTORE'] + ';',
         'GRANT CONNECT ON DATABASE ' + SQL['DB_DATASTORE'] + ' TO ' + SQL['USER_DATASTORE'] + ';',
         'GRANT USAGE ON SCHEMA public TO ' + SQL['USER_DATASTORE'] + ';',
-        'GRANT SELECT ON ALL TABLES IN SCHEMA public TO ' + SQL['USER_DATASTORE'] +';',
+        'GRANT SELECT ON ALL TABLES IN SCHEMA public TO ' + SQL['USER_DATASTORE'] + ';',
         'ALTER DEFAULT PRIVILEGES FOR USER ' + SQL['USER'] + ' IN SCHEMA public GRANT SELECT ON TABLES TO ' + SQL['USER_DATASTORE'] + ';'
     ]
     try:
@@ -304,7 +265,7 @@ def db_set_perms():
         con.commit()
     except:
         print("Failed to set proper permissions. Exiting.")
-        exit (2)
+        exit(2)
     finally:
         con.close()
 
@@ -316,7 +277,7 @@ def db_list_backups(listonly=True, ts=TODAY, server=RESTORE['SERVER'], directory
     print(directory)
     print(RESTORE['DB_PREFIX'])
     if listonly:
-        line = ["rsync", '--list-only', user + '@' + server + ':' + directory + '/' + RESTORE['DB_PREFIX'] + '*' + ts + '*' ]
+        line = ["rsync", '--list-only', user + '@' + server + ':' + directory + '/' + RESTORE['DB_PREFIX'] + '*' + ts + '*']
     else:
         line = ["rsync", "-a", "--progress", user + '@' + server + ':' + directory + '/' + RESTORE['DB_PREFIX'] + '*' + ts + '*', RESTORE['TMP_DIR'] + '/']
         # empty the temp dir first.
@@ -330,24 +291,24 @@ def db_list_backups(listonly=True, ts=TODAY, server=RESTORE['SERVER'], directory
         else:
             result = subprocess.call(line, stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError as exc:
-        print('+++++++++++++++++++++++++++++++++++++++++++++++++++++')                                                                                                   
+        print('+++++++++++++++++++++++++++++++++++++++++++++++++++++')
         print("Can't find archives from", ts, "or can't connect.")
         print('The error encountered was:')
-        print('+++++++++++++++++++++++++++++++++++++++++++++++++++++')                                                                                                   
+        print('+++++++++++++++++++++++++++++++++++++++++++++++++++++')
         print(str(exc.output.decode("utf-8").strip()))
-        print('+++++++++++++++++++++++++++++++++++++++++++++++++++++')                                                                                                   
+        print('+++++++++++++++++++++++++++++++++++++++++++++++++++++')
         q = 'Would you like to search again?'
         if not query_yes_no(q, default='no'):
             print("Aborting restore operation.")
             exit(0)
         return False
     if listonly:
-        print('+++++++++++++++++++++++++++++++++++++++++++++++++++++')                                                                                                   
+        print('+++++++++++++++++++++++++++++++++++++++++++++++++++++')
         print('Listing backups found:')
-        print('+++++++++++++++++++++++++++++++++++++++++++++++++++++')                                                                                                   
+        print('+++++++++++++++++++++++++++++++++++++++++++++++++++++')
         result = result.decode("utf-8").rstrip('\n\n')
         print(("Output: \n{}\n".format(result)))
-        print('+++++++++++++++++++++++++++++++++++++++++++++++++++++')                                                                                                   
+        print('+++++++++++++++++++++++++++++++++++++++++++++++++++++')
     return result
 
 
@@ -360,7 +321,7 @@ def db_get_last_backups():
         # print(name)
         if name.startswith(RESTORE['DB_PREFIX'] + '.' + SQL['DB']):
             list_db.append(name)
-        elif name.startswith(RESTORE['DB_PREFIX'] + '.' +  SQL['DB_DATASTORE']):
+        elif name.startswith(RESTORE['DB_PREFIX'] + '.' + SQL['DB_DATASTORE']):
             list_db_datastore.append(name)
     # print(list_db)
     # print(list_db_datastore)
@@ -391,28 +352,6 @@ def db_get_last_backups():
     print('+++++++++++++++++++++++++++++++++++++++++++++++++++++')
     global TS
     TS = ts
-
-    # list = db_list_backups().split('\n')
-    # backups = []
-    # # I get only the newer two backups
-    # for item in list:
-    #     backups.append(item.split()[4])
-    # backup1= backups.pop(0)
-    # for backup in backups:
-    #     if backup1.split('.')[4] == backup.split('.')[4]:
-    #         print('Last two backups have different timestamps = not good. Aborting...')
-    #         exit(0)
-    # ts = backup1.split('.')[4]
-    # print('Trying to get for you the following backups:')
-    # print(backup1)
-    # print(backup2)
-    # print('+++++++++++++++++++++++++++++++++++++++++++++++++++++')                                                                                                   
-    # db_list_backups(False,ts)
-    # print('+++++++++++++++++++++++++++++++++++++++++++++++++++++')                                                                                                   
-    # print('Done. Backups are available in', RESTORE['TMP_DIR'])
-    # print('+++++++++++++++++++++++++++++++++++++++++++++++++++++')                                                                                                   
-    # global TS
-    # TS = ts
 
 
 def dbs_restore(from_local):
@@ -457,35 +396,11 @@ def db_restore(filename='', db=''):
     with open(os.devnull, 'wb') as devnull:
         subprocess.call(cmd, stdout=devnull, stderr=subprocess.STDOUT)
 
-    # ts='latest'):
-    # if ts == 'latest':
-    #     ts = TODAY
-    # server = get_input('Backup server (hostname/IP)', False)
-    # if len(server) == 0:
-    #     server = RESTORE['SERVER']
-    # directory = get_input('Backup directory (no trailing slash)', False)
-    # if len(directory) == 0:
-    #     directory = '/srv/hdx/backup/prod'
-    # user = get_input('Backup user', False)
-    # if len(user) == 0:
-    #     user = 'hdx'
-    # line = ["rsync", '--list-only', user + '@' + server + ':' + directory + '/prod.ckan.db*' + ts + '*' ]
-    # try:
-    #     aha = subprocess.call(line)
-    #     print(aha)
-    # except:
-    #     print(" failed.")
-    #     exit(1)
-
-    # print("in db restore")
-    # print(ts)
-    # exit(0)
-
 
 def filestore_restore(ts=TODAY, server=RESTORE['SERVER'], directory=RESTORE['DIR'], user=RESTORE['USER'], clean=False):
     # print('This doesn\'t do anything right now...')
     # exit(0)
-    line = ["rsync", "-a", "--progress", user + '@' + server + ':' + directory + '/' +  RESTORE['FILESTORE_PREFIX'] + '*' + ts + '*', RESTORE['TMP_DIR'] + '/']
+    line = ["rsync", "-a", "--progress", user + '@' + server + ':' + directory + '/' + RESTORE['FILESTORE_PREFIX'] + '*' + ts + '*', RESTORE['TMP_DIR'] + '/']
     # if os.path.isdir(RESTORE['TMP_DIR']):
     #     for the_file in os.listdir(RESTORE['TMP_DIR']):
     #         file_path = os.path.join(RESTORE['TMP_DIR'], the_file)
@@ -501,12 +416,12 @@ def filestore_restore(ts=TODAY, server=RESTORE['SERVER'], directory=RESTORE['DIR
     try:
         result = subprocess.call(line, stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError as exc:
-        print('+++++++++++++++++++++++++++++++++++++++++++++++++++++')                                                                                                   
+        print('+++++++++++++++++++++++++++++++++++++++++++++++++++++')
         print("Can't find archive from", ts, "or can't connect.")
         print('The error encountered was:')
-        print('+++++++++++++++++++++++++++++++++++++++++++++++++++++')                                                                                                   
+        print('+++++++++++++++++++++++++++++++++++++++++++++++++++++')
         print(str(exc.output.decode("utf-8").strip()))
-        print('+++++++++++++++++++++++++++++++++++++++++++++++++++++')                                                                                                   
+        print('+++++++++++++++++++++++++++++++++++++++++++++++++++++')
         # q = 'Would you like to get anothr backup?'
         # if not query_yes_no(q, default='no'):
         #     print("Aborting restore operation.")
@@ -525,7 +440,7 @@ def filestore_restore(ts=TODAY, server=RESTORE['SERVER'], directory=RESTORE['DIR
     if tarfile.is_tarfile(tfilename):
         if clean:
             filestore_dir = '/srv/filestore'
-            for root, dirs, files in os.walk(filestore_dir, topdown=False):  
+            for root, dirs, files in os.walk(filestore_dir, topdown=False):
                 for item in files:
                     try:
                         os.remove(os.path.join(root, item))
@@ -550,7 +465,7 @@ def filestore_restore(ts=TODAY, server=RESTORE['SERVER'], directory=RESTORE['DIR
             # os.makedirs('/srv/filestore', exist_ok=True)
             # exit(0)
         tfile = tarfile.open(tfilename, 'r:gz')
-        print('Restoring filestore from ' + tfilename )
+        print('Restoring filestore from ' + tfilename)
         print('It will take a while...')
         try:
             tfile.extractall('/srv')
@@ -573,7 +488,7 @@ def filestore_restore(ts=TODAY, server=RESTORE['SERVER'], directory=RESTORE['DIR
 
 def deploy():
     control('stop')
-    print("changing dir to "+ BASEDIR)
+    print('changing dir to', BASEDIR)
     os.chdir(BASEDIR)
     #print('fetching branch or tag', BRANCH)
     #cmd_line = ['git', 'fetch', 'origin', BRANCH]
@@ -640,7 +555,7 @@ def backup_filestore(verbose=True):
     if not os.path.isdir(BACKUP['DIR']):
         print('Backup directory (' + BACKUP['DIR'] + ') does not exists.')
         exit(0)
-    filestore_archive = BACKUP['DIR'] + '/' + BACKUP['FILESTORE_PREFIX'] + '.' + SUFFIX +'.tar'
+    filestore_archive = BACKUP['DIR'] + '/' + BACKUP['FILESTORE_PREFIX'] + '.' + SUFFIX + '.tar'
     if verbose:
         sys.stdout.write('Archiving filestore under ' + filestore_archive + '\n')
         sys.stdout.flush()
@@ -712,7 +627,7 @@ def db_connect_to_postgres(host=SQL['HOST'], port=SQL['PORT'], dbname='postgres'
         con = psycopg2.connect(host=host, port=port, database=dbname, user=user)
     except:
         print("I am unable to connect to the database, exiting.")
-        exit(2) 
+        exit(2)
     return con
 
 
@@ -792,7 +707,7 @@ def reinstall_plugins():
     if len(cmd) == 2:
         cmd.append('install')
     for item in os.listdir(path):
-        fullpath = os.path.join(path,item)
+        fullpath = os.path.join(path, item)
         if os.path.isdir(fullpath):
             if item.startswith('ckanext-'):
                 print('Reinstalling plugin: ', item)
@@ -831,7 +746,7 @@ def solr_reindex():
 
 
 def less_compile():
-    cmd = ['paster', '--plugin=ckanext-hdx_theme','custom-less-compile', '-c', INI_FILE]
+    cmd = ['paster', '--plugin=ckanext-hdx_theme', 'custom-less-compile', '-c', INI_FILE]
     os.chdir(BASEDIR)
     less_wr_dirs = ["ckanext-hdx_theme/ckanext/hdx_theme/public/css/generated", "/srv/ckan/ckanext-hdx_theme/ckanext/hdx_theme/less/tmp"]
     for location in less_wr_dirs:
@@ -841,8 +756,8 @@ def less_compile():
     print('Fixing permissions on writeable folders...')
     for location in less_wr_dirs:
         os.chown(location, 33, 0)
-        for root, dirs, files in os.walk(os.path.join(BASEDIR, location)):  
-            for item in dirs:  
+        for root, dirs, files in os.walk(os.path.join(BASEDIR, location)):
+            for item in dirs:
                 os.chown(os.path.join(root, item), 33, 0)
             for item in files:
                 os.chown(os.path.join(root, item), 33, 0)
@@ -1214,8 +1129,8 @@ def main():
 
 
 if __name__ == '__main__':
-    opts=sys.argv
-    script=opts.pop(0)
+    opts = sys.argv
+    script = opts.pop(0)
     if len(opts) == 0:
         exit(1)
     main()
