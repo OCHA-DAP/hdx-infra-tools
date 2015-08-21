@@ -664,7 +664,7 @@ def feature():
     print('Rebuilding feature index...')
     subprocess.call(cmd)
     print('Fixing permissions on feature-index.js...')
-    feature_index_file = os.path.join(BASEDIR, '/ckanext-hdx_theme/ckanext/hdx_theme/fanstatic/search/feature-index.js')
+    feature_index_file = os.path.join(BASEDIR, 'ckanext-hdx_theme/ckanext/hdx_theme/fanstatic/search/feature-index.js')
     os.chown(feature_index_file, 33, 0)
     print('Done.')
 
