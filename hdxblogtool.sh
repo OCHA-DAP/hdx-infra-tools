@@ -161,7 +161,7 @@ function make_read_only {
 function update {
     dstfile=$(readlink $0)
     curl -s -o $dstfile https://bitbucket.org/teodorescuserban/hdx-tools/raw/master/hdxblogtool.sh
-    chown +x $dstfile
+    chmod +x $dstfile
 }
 
 server=${HDX_BACKUP_SERVER}
