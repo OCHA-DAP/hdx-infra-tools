@@ -86,6 +86,8 @@ def show_usage():
         deploy        - just deploy
             test      - deploy then run tests
 
+        feature       - hdx-feature-search rebuild
+
         less compile  - compiles less resource defined in prod.ini
 
         log           - shows ALL ckan logs
@@ -655,6 +657,18 @@ def db_create(dbname, owner=SQL['USER']):
         con.close()
 
 
+def feature():
+    '''rebuilds the feature-index.js'''
+    cmd = ['paster', 'hdx-feature-search', 'build', '-c', INI_FILE]
+    os.chdir(os.path.join(BASEDIR, 'ckanext-hdx_search'))
+    print('Rebuilding feature index...')
+    subprocess.call(cmd)
+    print('Fixing permissions on feature-index.js...')
+    feature_index_file = os.path.join(BASEDIR, '/ckanext-hdx_theme/ckanext/hdx_theme/fanstatic/search/feature-index.js')
+    os.chown(feature_index_file, 33, 0)
+    print('Done.')
+
+
 def refresh_pgpass():
     pgpass = '/root/.pgpass'
     pgpass_line = ''
@@ -1057,6 +1071,8 @@ def main():
         db()
     elif cmd == 'deploy':
         deploy()
+    elif cmd == 'feature':
+        feature()
     elif cmd == 'pgpass':
         refresh_pgpass()
     elif cmd == 'backup':
