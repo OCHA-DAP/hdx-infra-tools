@@ -29,9 +29,12 @@ TS = ''
 SQL = dict(
     SUPERUSER="ckan", HOST=str(os.getenv('HDX_CKANDB_ADDR')),
     PORT=str(os.getenv('HDX_CKANDB_PORT')),
-    USER="ckan", PASSWORD="ckan", DB="ckan",
-    USER_DATASTORE="datastore", DB_DATASTORE="datastore",
-    DB_TEST="ckan_test", DB_DATASTORE_TEST="datastore_test"
+    USER=str(os.getenv('HDX_CKANDB_USER')),
+    PASSWORD=str(os.getenv('HDX_CKANDB_PASS')),
+    DB=str(os.getenv('HDX_CKANDB_DB')),
+    USER_DATASTORE=str(os.getenv('HDX_CKANDB_USER_DATASTORE')),
+    DB_DATASTORE=str(os.getenv('HDX_CKANDB_DB_DATASTORE')),
+    DB_TEST='ckan_test', DB_DATASTORE_TEST='datastore_test'
 )
 
 # to get the snapshot
@@ -671,30 +674,26 @@ def feature():
 
 def refresh_pgpass():
     pgpass = '/root/.pgpass'
-    pgpass_line = ''
-    write = False
-    correct_line = SQL['HOST'] + ':' + SQL['PORT'] + ':*:' + SQL['SUPERUSER'] + ':' + SQL['PASSWORD']
-    # does it exists?
+    partial_line = ''.join([':*:', SQL['SUPERUSER'], ':'])
+    correct_line = ':'.join([SQL['HOST'], SQL['PORT'], '*', SQL['SUPERUSER'], SQL['PASSWORD']])
+    newpgpass = []
     if os.path.isfile(pgpass):
-        with open(pgpass, 'r') as f:
-            # get only the first line
-            pgpass_line = f.readline().strip()
-        # print pgpass_line
-        # print correct_line
-        if pgpass_line != correct_line:
-            print("The pgpass file will be overwritten with:")
-            print(correct_line)
-            write = True
-        else:
-            print("The pgpass file has the right content.")
-    else:
-        write = True
-
-    if write:
-        with open(pgpass, 'w') as f:
-            f.write(correct_line + '\n')
-            print("File overwritten.")
-    # change permissions if needed
+        with open(pgpass) as f:
+            content = f.readlines()
+        for line in content:
+            if len(line):   # just skip the empty lines
+                line = line.strip()
+                if correct_line == line:
+                    print("The pgpass file has the right content.")
+                    exit(0)
+                if partial_line not in line:
+                    newpgpass.append(line)
+    newpgpass.append(correct_line)
+    print(newpgpass)
+    with open(pgpass, 'w') as f:
+        for line in newpgpass:
+            f.write("%s\n" % line)
+        print("File overwritten.")
     if oct(os.stat(pgpass).st_mode)[-3:] != '600':
         os.chmod(pgpass, 0o600)
         print('Permissions were incorrect. Fixed.')
