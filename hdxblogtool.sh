@@ -177,13 +177,14 @@ bloguser=${HDX_BLOGDB_USER}
 blogpass=${HDX_BLOGDB_PASS}
 blogdb=${HDX_BLOGDB_DB}
 blogconf=$blogdir/wp-config.php
-backupdir=/srv/backup
+backupdir=${HDX_BACKUP_FOLDER}
 preffix="prod"
+
 
 if [ "$1" == "restore" ]; then
     blog_restore;
 elif [ "$1" == "backup" ]; then
-    [ -d /srv/backup ] || mkdir -p /srv/backup
+    [ -d $backupdir ] || mkdir -p $backupdir
     dump_db;
     arch_files;
 elif [ "$1" == "cleanup" ]; then

@@ -22,7 +22,9 @@ APPDIR = TOMCATDIR + '/webapps'
 # for deployment (might employ tags - unsuitable for backup)
 BRANCH = os.getenv('HDX_CPS_BRANCH')
 # for backup
-BACKUP_AS = os.getenv('HDX_TYPE')
+BACKUP_AS = 'dev'
+if isinstance(os.getenv('HDX_TYPE'), str):
+    BACKUP_AS = os.getenv('HDX_TYPE')
 TS = ''
 
 SQL = dict(
@@ -50,6 +52,8 @@ BACKUP = dict(
     AS=BACKUP_AS,
     DIR='/srv/backup',
 )
+if isinstance(os.getenv('HDX_BACKUP_FOLDER'), str):
+    BACKUP['DIR'] = os.getenv('HDX_BACKUP_FOLDER')
 BACKUP['PREFIX'] = BACKUP['AS'] + '.' + APP
 BACKUP['DB_PREFIX'] = BACKUP['PREFIX'] + '.db'
 BACKUP['DB_PREFIX_MAIN'] = BACKUP['DB_PREFIX'] + '.' + SQL['DB']
