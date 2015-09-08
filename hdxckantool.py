@@ -50,8 +50,8 @@ BACKUP = dict(
     AS=BACKUP_AS,
     DIR='/srv/backup'
 )
-if isinstance(os.getenv('HDX_BACKUP_FOLDER'), str):
-    BACKUP['DIR'] = os.getenv('HDX_BACKUP_FOLDER')
+if isinstance(os.getenv('HDX_BACKUP_DIR'), str):
+    BACKUP['DIR'] = os.getenv('HDX_BACKUP_DIR')
 BACKUP['PREFIX'] = BACKUP['AS'] + '.' + APP
 BACKUP['DB_PREFIX'] = BACKUP['PREFIX'] + '.db'
 BACKUP['DB_PREFIX_MAIN'] = BACKUP['DB_PREFIX'] + '.' + SQL['DB']
@@ -349,7 +349,7 @@ def dbs_restore(from_local):
     if not query_yes_no(q, default='no'):
         print("Aborting restore operation.")
         exit(0)
-    print(from_local)
+    # print(from_local)
     if not from_local:
         db_get_last_backups()
     # unzip the files
@@ -1084,6 +1084,7 @@ def main():
             elif opts[0] == 'fs':
                 backup_filestore(verbose)
             elif opts[0] == 'gis':
+                # backup_db()
                 print('gis backup not yet implemented')
             else:
                 exit(1)
@@ -1143,7 +1144,7 @@ def main():
 if __name__ == '__main__':
     opts = sys.argv
     script = opts.pop(0)
-    print(os.path.realpath(__file__))
+    # print(os.path.realpath(__file__))
     if len(opts) == 0:
         exit(1)
     main()

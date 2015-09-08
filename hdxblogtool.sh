@@ -132,14 +132,16 @@ function cleanup {
 
 function dump_db {
     #mysqldump --user=$user --password=$pass --extended-insert=FALSE --add-drop-database $db > $bkdir/$preffix.$db.$suffix.sql
+    echo "Getting the database..."
     mysqldump -h $dbhost -P $dbport --user=$bloguser --password=$blogpass --add-drop-database -B $blogdb > $backupdir/$preffix.$blogdb.$suffix.sql
-    gzip $backupdir/*sql
+    echo "Compressing the database dump..."
+    gzip $backupdir/*.sql
 }
 
 function arch_files {
     # strangeness of this code addresses the tar error "file changed as we read it"
-    mkdir -p $backupdir/tmp-blog-backup
     rm -rf $backupdir/tmp-blog-backup
+    mkdir -p $backupdir/tmp-blog-backup
     rsync -aq $blogdir/* $backupdir/tmp-blog-backup/
     rsync -aq $blogdir/* $backupdir/tmp-blog-backup/
     rsync -aq $blogdir/* $backupdir/tmp-blog-backup/

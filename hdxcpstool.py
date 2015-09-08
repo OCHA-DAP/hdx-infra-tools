@@ -52,8 +52,8 @@ BACKUP = dict(
     AS=BACKUP_AS,
     DIR='/srv/backup',
 )
-if isinstance(os.getenv('HDX_BACKUP_FOLDER'), str):
-    BACKUP['DIR'] = os.getenv('HDX_BACKUP_FOLDER')
+if isinstance(os.getenv('HDX_BACKUP_DIR'), str):
+    BACKUP['DIR'] = os.getenv('HDX_BACKUP_DIR')
 BACKUP['PREFIX'] = BACKUP['AS'] + '.' + APP
 BACKUP['DB_PREFIX'] = BACKUP['PREFIX'] + '.db'
 BACKUP['DB_PREFIX_MAIN'] = BACKUP['DB_PREFIX'] + '.' + SQL['DB']
@@ -463,7 +463,7 @@ def restore_cleanup():
 
 
 def update():
-    srcfile = 'https://bitbucket.org/teodorescuserban/hdx-tools/raw/master/hdxckantool.py'
+    srcfile = 'https://bitbucket.org/teodorescuserban/hdx-tools/raw/master/hdxcpstool.py'
     line = ['curl', '-s', '-o', os.path.realpath(__file__), srcfile]
     try:
         subprocess.call(line)
