@@ -179,7 +179,7 @@ bloguser=${HDX_BLOGDB_USER}
 blogpass=${HDX_BLOGDB_PASS}
 blogdb=${HDX_BLOGDB_DB}
 blogconf=$blogdir/wp-config.php
-backupdir=${HDX_BACKUP_FOLDER}
+backupdir=${HDX_BACKUP_DIR}
 preffix="prod"
 
 
