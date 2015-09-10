@@ -48,10 +48,13 @@ RESTORE['FILESTORE_PREFIX'] = RESTORE['PREFIX'] + '.filestore'
 
 BACKUP = dict(
     AS=BACKUP_AS,
-    DIR='/srv/backup'
+    DIR='/srv/backup',
+    FILESTORE_DIR='/srv/filestore'
 )
 if isinstance(os.getenv('HDX_BACKUP_DIR'), str):
     BACKUP['DIR'] = os.getenv('HDX_BACKUP_DIR')
+if isinstance(os.getenv('HDX_FILESTORE_DIR'), str):
+    BACKUP['FILESTORE_DIR'] = os.getenv('HDX_FILESTORE_DIR')
 BACKUP['PREFIX'] = BACKUP['AS'] + '.' + APP
 BACKUP['DB_PREFIX'] = BACKUP['PREFIX'] + '.db'
 BACKUP['DB_PREFIX_MAIN'] = BACKUP['DB_PREFIX'] + '.' + SQL['DB']
@@ -372,7 +375,7 @@ def dbs_restore(from_local):
     control('start')
 
 
-def db_restore(filename='', db=''):
+def db_restore(host=SQL['HOST'], port=SQL['PORT'], user=SQL['USER'], db='', prefix='', verbose=True, filename=''):
     if not filename or not db:
         print('No filename to restore from or no db found. Aborting...')
         exit(0)
@@ -381,7 +384,7 @@ def db_restore(filename='', db=''):
     db_create(db)
     print('Restoring database', db, 'from', filename)
     print('Please wait. This may take a while...')
-    cmd = ['pg_restore', '-vOx', '-h', SQL['HOST'], '-p', SQL['PORT'], '-U', SQL['USER'], '-d', db, filename]
+    cmd = ['pg_restore', '-vOx', '-h', host, '-p', port, '-U', user, '-d', db, filename]
     # print(cmd)
     with open(os.devnull, 'wb') as devnull:
         subprocess.call(cmd, stdout=devnull, stderr=subprocess.STDOUT)
@@ -429,7 +432,7 @@ def filestore_restore(ts=TODAY, server=RESTORE['SERVER'], directory=RESTORE['DIR
     tfilename = os.path.join(RESTORE['TMP_DIR'], tf[0])
     if tarfile.is_tarfile(tfilename):
         if clean:
-            filestore_dir = '/srv/filestore'
+            filestore_dir = BACKUP['FILESTORE_DIR']
             for root, dirs, files in os.walk(filestore_dir, topdown=False):
                 for item in files:
                     try:
@@ -466,7 +469,7 @@ def filestore_restore(ts=TODAY, server=RESTORE['SERVER'], directory=RESTORE['DIR
         print(tfilename + ' is not a valid archive.')
         exit(0)
     print('Fixing permissions on filestore')
-    for root, dirs, files in os.walk('/srv/filestore'):
+    for root, dirs, files in os.walk(BACKUP['FILESTORE_DIR']):
         for item in dirs:
             os.chown(os.path.join(root, item), 33, 33)
             os.chmod(os.path.join(root, item), 0o755)
@@ -509,7 +512,86 @@ def tests():
             tests_nose(dirname)
 
 
-def backup_db(db='', prefix='', verbose=True):
+def gis_init():
+    gis_envs = ['HDX_GISDB_ADDR', 'HDX_GISDB_PORT', 'HDX_GISDB_DB', 'HDX_GISDB_USER', 'HDX_GISDB_PASS']
+    gis_db_details = []
+    for env in gis_envs:
+        if isinstance(os.getenv(env), str):
+            gis_db_details.append(os.getenv(env))
+        else:
+            print('Error. Env var', env, 'not found. Exiting.\n')
+            exit(0)
+    return gis_db_details
+
+
+def gis_db_clear():
+    '''empty the gis database'''
+
+    if not query_yes_no('Clearing gis db. Are you sure?', default='no'):
+        print('Nothing changed.')
+        exit(0)
+
+    host, port, db, user, password = gis_init()
+    refresh_pgpass(host=host, port=port, user=user, password=password, verbose=False)
+    # psql -h $HDX_GISDB_ADDR -p $HDX_GISDB_PORT -U $HDX_GISDB_USER $HDX_GISDB_DB -ntc '\dt' | awk -F \|
+    # '{ print $2 }' | sed -e 's/^ //g' | grep -E "^pre_" | more
+    con = db_connect_to_postgres(host=host, port=port, user=user, dbname=db)
+    con.set_isolation_level(0)
+    cur = con.cursor()
+
+    cur.execute('DROP EXTENSION postgis CASCADE;')
+
+    try:
+        query = "SELECT table_name, table_type FROM information_schema.tables WHERE table_schema = 'public';"
+        cur.execute(query)
+        con.commit()
+        rows = cur.fetchall()
+        if len(rows) > 1:
+            print('Removing', len(rows), 'tables...')
+        for row in rows:
+            table_name, table_type = row
+            if table_type == 'BASE TABLE':
+                query = "DROP TABLE " + row[0] + " CASCADE;"
+                cur.execute(query)
+            else:
+                print('Not a table... What could it be?. Skipping.')
+
+        cur.execute('CREATE EXTENSION postgis;')
+        cur.execute('CREATE EXTENSION postgis_topology;')
+
+    except:
+        print("I can't query that")
+        exit(2)
+    finally:
+        con.close()
+
+
+def gis_restore():
+    gis_db_clear()
+    host, port, db, user, password = gis_init()
+
+    archive_name = '/srv/backup/gis.plsql.gz'
+    filename = '/srv/backup/gis.plsql'
+
+    decompress_file(archive_name, filename, False)
+
+    print('Restoring database', db, 'from', filename)
+    print('Please wait. This may take a while...')
+    cmd = ['pg_restore', '-vOx', '-h', host, '-p', port, '-U', user, '-d', db, filename]
+    # print(cmd)
+    with open(os.devnull, 'wb') as devnull:
+        subprocess.call(cmd, stdout=devnull, stderr=subprocess.STDOUT)
+    db_restore(host=host, port=port, user=user, db=db, filename='/srv/backup/gis.psql')
+
+
+def gis_backup(verbose=True):
+    '''wrapper for backup_db for now'''
+    host, port, db, user, password = gis_init()
+    refresh_pgpass(host=host, port=port, user=user, password=password, verbose=False)
+    backup_db(host=host, port=port, user=user, db=db, prefix=BACKUP['DB_PREFIX'], verbose=True)
+
+
+def backup_db(host=SQL['HOST'], port=SQL['PORT'], user=SQL['USER'], db='', prefix='', verbose=True):
     if not db or not prefix:
         print('backup_db called with empty archive or prefix')
         exit(0)
@@ -522,7 +604,7 @@ def backup_db(db='', prefix='', verbose=True):
         sys.stdout.write('Archiving ' + db + ' db under ' + archive_name + '.gz\n')
     sys.stdout.flush()
     try:
-        cmd = 'pg_dump -vFt -h ' + SQL['HOST'] + ' -p ' + SQL['PORT'] + ' -U ' + SQL['USER'] + ' -f  ' + archive_name + ' ' + db
+        cmd = 'pg_dump -vFt -h ' + host + ' -p ' + port + ' -U ' + user + ' -f  ' + archive_name + ' ' + db
         with open(os.devnull, 'wb') as devnull:
             subprocess.call(cmd.split(), stdout=devnull, stderr=subprocess.STDOUT)
     except IOError:
@@ -547,13 +629,28 @@ def backup_filestore(verbose=True):
         exit(0)
     filestore_archive = BACKUP['DIR'] + '/' + BACKUP['FILESTORE_PREFIX'] + '.' + SUFFIX + '.tar'
     if verbose:
-        sys.stdout.write('Archiving filestore under ' + filestore_archive + '\n')
+        sys.stdout.write('Archiving filestore from ' + BACKUP['FILESTORE_DIR'] + ' under ' + filestore_archive + '\n')
         sys.stdout.flush()
     try:
         tar = tarfile.open(filestore_archive, 'w')
-        tar.add('/srv/filestore', arcname='filestore')
+        os.chdir(BACKUP['FILESTORE_DIR'])
+        # print(os.listdir('.'))
+        # print(os.cwd())
+        for folder in ['storage', 'resources']:
+            if os.path.isdir(folder):
+                tar.add(folder)
+            else:
+                raise NameError('filestore backup:', 'folder "' + folder + '" not found under ' + BACKUP['FILESTORE_DIR'])
+        # tar.add('storage')
+        tar.add('test')
+        # tar.add('.', arcname='filestore')
     except IOError:
         sys.stdout.write('Filestore content changed while I was reading it... Please try again.\n')
+        sys.stdout.flush()
+        exit(0)
+    except NameError as err:
+        phase, reason = err.args
+        sys.stdout.write('An error has occured: ' + reason + '\n')
         sys.stdout.flush()
         exit(0)
     else:
@@ -668,10 +765,12 @@ def feature():
     print('Done.')
 
 
-def refresh_pgpass():
+def refresh_pgpass(host=SQL['HOST'], port=SQL['PORT'], user=SQL['SUPERUSER'], password=SQL['PASSWORD'], verbose=True):
+
     pgpass = '/root/.pgpass'
-    partial_line = ''.join([':*:', SQL['SUPERUSER'], ':'])
-    correct_line = ':'.join([SQL['HOST'], SQL['PORT'], '*', SQL['SUPERUSER'], SQL['PASSWORD']])
+    partial_line = ''.join([':*:', user, ':'])
+    correct_line = ':'.join([host, port, '*', user, password])
+
     newpgpass = []
     if os.path.isfile(pgpass):
         with open(pgpass) as f:
@@ -680,20 +779,25 @@ def refresh_pgpass():
             if len(line):   # just skip the empty lines
                 line = line.strip()
                 if correct_line == line:
-                    print("The pgpass file has the right content.")
-                    exit(0)
+                    if verbose:
+                        print("The pgpass file has the right content.")
+                    # exit(0)
+                    return True
                 if partial_line not in line:
                     newpgpass.append(line)
     newpgpass.append(correct_line)
-    print(newpgpass)
+    # print(newpgpass)
     with open(pgpass, 'w') as f:
         for line in newpgpass:
             f.write("%s\n" % line)
-        print("File overwritten.")
+        if verbose:
+            print("File overwritten.")
     if oct(os.stat(pgpass).st_mode)[-3:] != '600':
         os.chmod(pgpass, 0o600)
-        print('Permissions were incorrect. Fixed.')
-    print('Done.')
+        if verbose:
+            print('Permissions were incorrect. Fixed.')
+    if verbose:
+        print('Done.')
 
 
 def reinstall_plugins():
@@ -1071,6 +1175,8 @@ def main():
         feature()
     elif cmd == 'pgpass':
         refresh_pgpass()
+        host, port, db, user, password = gis_init()
+        refresh_pgpass(host=host, port=port, user=user, password=password)
     elif cmd == 'backup':
         if 'quiet' in opts:
             opts.remove('quiet')
@@ -1084,8 +1190,7 @@ def main():
             elif opts[0] == 'fs':
                 backup_filestore(verbose)
             elif opts[0] == 'gis':
-                # backup_db()
-                print('gis backup not yet implemented')
+                gis_backup()
             else:
                 exit(1)
         else:
@@ -1113,7 +1218,8 @@ def main():
             elif opts[0] == 'fs':
                 filestore_restore()
             elif opts[0] == 'gis':
-                print('gis restore not yet implemented')
+                gis_restore()
+                # print('gis restore not yet implemented')
             elif opts[0] == 'cleanup':
                 restore_cleanup()
             else:
