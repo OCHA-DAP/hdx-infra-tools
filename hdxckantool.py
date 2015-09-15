@@ -1185,6 +1185,8 @@ def main():
             verbose = True
         if len(opts):
             if opts[0] == 'db':
+                refresh_pgpass(host=SQL['HOST'], port=SQL['PORT'], user=SQL['USER'],
+                               password=SQL['PASSWORD'], verbose=False)
                 backup_db(db=SQL['DB'], prefix=BACKUP['DB_PREFIX'], verbose=verbose)
                 backup_db(db=SQL['DB_DATASTORE'], prefix=BACKUP['DB_PREFIX'], verbose=verbose)
             elif opts[0] == 'fs':
