@@ -427,7 +427,7 @@ def db_create(dbname, owner=SQL['USER']):
         con.close()
 
 
-def refresh_pgpass():
+def refresh_pgpass(verbose=True):
     pgpass = '/root/.pgpass'
     partial_line = ''.join([':*:', SQL['SUPERUSER'], ':'])
     correct_line = ':'.join([SQL['HOST'], SQL['PORT'], '*', SQL['SUPERUSER'], SQL['PASSWORD']])
@@ -439,7 +439,8 @@ def refresh_pgpass():
             if len(line):   # just skip the empty lines
                 line = line.strip()
                 if correct_line == line:
-                    print("The pgpass file has the right content.")
+                    if verbose:
+                        print("The pgpass file has the right content.")
                     exit(0)
                 if partial_line not in line:
                     newpgpass.append(line)
@@ -448,11 +449,14 @@ def refresh_pgpass():
     with open(pgpass, 'w') as f:
         for line in newpgpass:
             f.write("%s\n" % line)
-        print("File overwritten.")
+        if verbose:
+            print("File overwritten.")
     if oct(os.stat(pgpass).st_mode)[-3:] != '600':
         os.chmod(pgpass, 0o600)
-        print('Permissions were incorrect. Fixed.')
-    print('Done.')
+        if verbose:
+            print('Permissions were incorrect. Fixed.')
+    if verbose:
+        print('Done.')
 
 
 def restore_cleanup():
@@ -491,6 +495,7 @@ def main():
     elif cmd == 'pgpass':
         refresh_pgpass()
     elif cmd == 'backup':
+        refresh_pgpass(verbose=False)
         if len(opts) and opts[0] == 'quiet':
                 backup(verbose=False)
         else:
