@@ -1185,8 +1185,8 @@ def main():
             verbose = True
         if len(opts):
             if opts[0] == 'db':
-                backup_db(SQL['DB'], BACKUP['DB_PREFIX'], verbose)
-                backup_db(SQL['DB_DATASTORE'], BACKUP['DB_PREFIX'], verbose)
+                backup_db(db=SQL['DB'], prefix=BACKUP['DB_PREFIX'], verbose=verbose)
+                backup_db(db=SQL['DB_DATASTORE'], prefix=BACKUP['DB_PREFIX'], verbose=verbose)
             elif opts[0] == 'fs':
                 backup_filestore(verbose)
             elif opts[0] == 'gis':
