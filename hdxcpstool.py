@@ -441,7 +441,7 @@ def refresh_pgpass(verbose=True):
                 if correct_line == line:
                     if verbose:
                         print("The pgpass file has the right content.")
-                    exit(0)
+                    return
                 if partial_line not in line:
                     newpgpass.append(line)
     newpgpass.append(correct_line)
