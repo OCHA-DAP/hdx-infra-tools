@@ -359,14 +359,15 @@ def dbs_restore(from_local):
     control('stop')
     for file in os.listdir(RESTORE['TMP_DIR']):
         archive_full_path = os.path.join(RESTORE['TMP_DIR'], file)
+        print(archive_full_path)
         file_full_path = archive_full_path.replace('.gz', '')
         decompress_file(archive_full_path, file_full_path, False)
         if file.startswith(RESTORE['DB_PREFIX'] + '.' + SQL['DB']):
             # restore main db
-            db_restore(file_full_path, SQL['DB'])
+            db_restore(filename=file_full_path, db=SQL['DB'])
         elif file.startswith(RESTORE['DB_PREFIX'] + '.' + SQL['DB_DATASTORE']):
             # restore datastore db
-            db_restore(file_full_path, SQL['DB_DATASTORE'])
+            db_restore(filename=file_full_path, db=SQL['DB_DATASTORE'])
             # restore permissions on datastore db
             db_set_perms()
         else:
@@ -505,11 +506,15 @@ def tests():
     os.chdir(BASEDIR)
     # get hdx plugin list
     dirs = sorted(os.listdir('.'))
+    res = 0
     for dirname in dirs:
         if dirname.startswith('ckanext-hdx_'):
             print("++++++++++++++++++++++++++++++++++++++++++++++++++++")
             print("Running tests for plugin", dirname)
-            tests_nose(dirname)
+            res += tests_nose(dirname)
+    if res:
+        print(" FAILURES: ", res)
+    exit(res)
 
 
 def gis_init():
