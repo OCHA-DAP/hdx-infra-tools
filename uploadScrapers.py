@@ -54,6 +54,7 @@ class UploadScrapers(object):
         resource['name'] = self.FILENAME
         resource['format'] = self.FORMAT
         # retarded ckan is still requesting a mandatory url field
+        # just use a blank url field, it will be replaced with the correct url
         resource['url'] = ''
         resource['description'] = self.DESCRIPTION
         self.RESOURCE = resource

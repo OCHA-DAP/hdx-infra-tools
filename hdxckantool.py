@@ -13,6 +13,8 @@ from shutil import rmtree
 
 APP = "ckan"
 BASEDIR = "/srv/ckan"
+if isinstance(os.getenv('HDX_CKAN_BASEDIR'), str):
+    BASEDIR = os.getenv('HDX_CKAN_BASEDIR')
 BRANCH = str(os.getenv('HDX_CKAN_BRANCH'))
 BACKUP_AS = 'dev'
 if isinstance(os.getenv('HDX_TYPE'), str):
@@ -196,7 +198,7 @@ def control(cmd):
         subprocess.call(line)
     except:
         print(cmd + " failed.")
-        exit(1)
+        exiting(1)
 
 
 def db():
@@ -206,25 +208,25 @@ def db():
     #  overwrite from snapshot
     # print opts
     if len(opts) == 0:
-        exit(1)
+        exiting(1)
     subcmd = opts.pop(0)
     subcmds = ['clean', 'set-perms', 'get']
     if subcmd not in subcmds:
         print(subcmd + ' not implemented yet. Exiting.')
-        exit(1)
+        exiting(1)
     elif subcmd == 'clean':
         print('Dropping and recreating databases!!!')
         if query_yes_no(' Are you sure?', 'no'):
             db_clean()
         else:
             print("Databases are still intact. :)")
-            exit(0)
+            exiting(0)
     elif subcmd == 'set-perms':
         db_set_perms()
     elif subcmd == 'get':
         db_get_last_backups()
 
-    exit(0)
+    exiting(0)
 
 
 def db_clean(dbckan=SQL['DB'], dbdatastore=SQL['DB_DATASTORE']):
@@ -258,7 +260,7 @@ def db_set_perms():
         con.commit()
     except:
         print("Failed to set proper permissions. Exiting.")
-        exit(2)
+        exiting(2)
     finally:
         con.close()
 
@@ -293,7 +295,7 @@ def db_list_backups(listonly=True, ts=TODAY, server=RESTORE['SERVER'], directory
         q = 'Would you like to search again?'
         if not query_yes_no(q, default='no'):
             print("Aborting restore operation.")
-            exit(0)
+            exiting(0)
         return False
     if listonly:
         print('+++++++++++++++++++++++++++++++++++++++++++++++++++++')
@@ -334,7 +336,7 @@ def db_get_last_backups():
         break
     if len(backup) != 2:
         print("Can't figure out a pair of main ckan db and datastore db having the same timestamps. Aborting...")
-        exit(0)
+        exiting(0)
     print('Trying to get for you the following backups:')
     print(backup[0])
     print(backup[1])
@@ -351,7 +353,7 @@ def dbs_restore(from_local):
     q = 'Are you sure you want to overwrite ckan databases? '
     if not query_yes_no(q, default='no'):
         print("Aborting restore operation.")
-        exit(0)
+        exiting(0)
     # print(from_local)
     if not from_local:
         db_get_last_backups()
@@ -379,7 +381,7 @@ def dbs_restore(from_local):
 def db_restore(host=SQL['HOST'], port=SQL['PORT'], user=SQL['USER'], db='', prefix='', verbose=True, filename=''):
     if not filename or not db:
         print('No filename to restore from or no db found. Aborting...')
-        exit(0)
+        exiting(0)
     print('Please wait. This may take a while...')
     db_drop(db)
     db_create(db)
@@ -391,219 +393,14 @@ def db_restore(host=SQL['HOST'], port=SQL['PORT'], user=SQL['USER'], db='', pref
         subprocess.call(cmd, stdout=devnull, stderr=subprocess.STDOUT)
 
 
-def filestore_restore(ts=TODAY, server=RESTORE['SERVER'], directory=RESTORE['DIR'], user=RESTORE['USER'], clean=False):
-    # print('This doesn\'t do anything right now...')
-    # exit(0)
-    line = ["rsync", "-a", "--progress", user + '@' + server + ':' + directory + '/' + RESTORE['FILESTORE_PREFIX'] + '*' + ts + '*', RESTORE['TMP_DIR'] + '/']
-    # if os.path.isdir(RESTORE['TMP_DIR']):
-    #     for the_file in os.listdir(RESTORE['TMP_DIR']):
-    #         file_path = os.path.join(RESTORE['TMP_DIR'], the_file)
-    #         try:
-    #             # if os.path.isfile(file_path):
-    #             os.unlink(file_path)
-    #         except Exception as e:
-    #             print(e)
-    #     #rmtree(RESTORE['TMP_DIR'])
-    # else:
-    os.makedirs(RESTORE['TMP_DIR'], exist_ok=True)
-    print('Getting the filestore archive...')
-    try:
-        result = subprocess.call(line, stderr=subprocess.STDOUT)
-    except subprocess.CalledProcessError as exc:
-        print('+++++++++++++++++++++++++++++++++++++++++++++++++++++')
-        print("Can't find archive from", ts, "or can't connect.")
-        print('The error encountered was:')
-        print('+++++++++++++++++++++++++++++++++++++++++++++++++++++')
-        print(str(exc.output.decode("utf-8").strip()))
-        print('+++++++++++++++++++++++++++++++++++++++++++++++++++++')
-        # q = 'Would you like to get anothr backup?'
-        # if not query_yes_no(q, default='no'):
-        #     print("Aborting restore operation.")
-        #     exit(0)
-        print('try another timestamp')
-        return False
-    print('Done.')
-    #tfilename =  os.path.join(RESTORE['TMP_DIR'], os.listdir(RESTORE['TMP_DIR'])[0])
-    # changed per Steven Merrill suggestion
-    tf = []
-    for f in os.listdir(RESTORE['TMP_DIR']):
-        if re.search('.tar.gz$', f):
-            tf.append(f)
-    #tf = [f in os.listdir(RESTORE['TMP_DIR']) if re.search('.tpl$', f)]
-    tfilename = os.path.join(RESTORE['TMP_DIR'], tf[0])
-    if tarfile.is_tarfile(tfilename):
-        if clean:
-            filestore_dir = BACKUP['FILESTORE_DIR']
-            for root, dirs, files in os.walk(filestore_dir, topdown=False):
-                for item in files:
-                    try:
-                        os.remove(os.path.join(root, item))
-                    except Exception as e:
-                        print(e)
-                        print('error removing ' + item)
-                if root != filestore_dir:
-                    try:
-                        os.rmdir(root)
-                    except Exception as e:
-                        print(e)
-                        print('error removing ' + root)
-
-                        # for the_file in os.listdir(filestore_dir):
-            #     file_path = os.path.join(filestore_dir, the_file)
-            #     try:
-                    # if os.path.isfile(file_path):
-                    # os.unlink(file_path)
-                # except Exception as e:
-                #     print(e)
-            # rmtree('/srv/filestore')
-            # os.makedirs('/srv/filestore', exist_ok=True)
-            # exit(0)
-        tfile = tarfile.open(tfilename, 'r:gz')
-        print('Restoring filestore from ' + tfilename)
-        print('It will take a while...')
-        try:
-            tfile.extractall('/srv')
-        except:
-            print('some error occured. bailing out...')
-            exit(0)
-    else:
-        print(tfilename + ' is not a valid archive.')
-        exit(0)
-    print('Fixing permissions on filestore')
-    for root, dirs, files in os.walk(BACKUP['FILESTORE_DIR']):
-        for item in dirs:
-            os.chown(os.path.join(root, item), 33, 33)
-            os.chmod(os.path.join(root, item), 0o755)
-        for item in files:
-            os.chown(os.path.join(root, item), 33, 33)
-            os.chmod(os.path.join(root, item), 0o644)
-    print('All done! Please do not forget to remove the archives in ' + RESTORE['TMP_DIR'])
-
-
-def deploy():
-    control('stop')
-    print('changing dir to', BASEDIR)
-    os.chdir(BASEDIR)
-    #print('fetching branch or tag', BRANCH)
-    #cmd_line = ['git', 'fetch', 'origin', BRANCH]
-    print('fetching branches and tags')
-    cmd_line = ['git', 'fetch']
-    subprocess.call(cmd_line)
-    print('hopping onto', BRANCH)
-    cmd_line = ['git', 'checkout', BRANCH]
-    subprocess.call(cmd_line)
-    print("pulling latest changes of ", BRANCH)
-    cmd_line = ['git', 'pull', 'origin', BRANCH]
-    subprocess.call(cmd_line)
-    print('done. starting', APP)
-    control('start')
-    if (len(opts) != 0) and (opts[0] == 'test'):
-        tests()
-
-
-def tests():
-    db_test_refresh()
-    os.chdir(BASEDIR)
-    # get hdx plugin list
-    dirs = sorted(os.listdir('.'))
-    res = 0
-    for dirname in dirs:
-        if dirname.startswith('ckanext-hdx_'):
-            print("++++++++++++++++++++++++++++++++++++++++++++++++++++")
-            print("Running tests for plugin", dirname)
-            res += tests_nose(dirname)
-    if res:
-        print(" FAILURES: ", res)
-    exit(res)
-
-
-def gis_init():
-    gis_envs = ['HDX_GISDB_ADDR', 'HDX_GISDB_PORT', 'HDX_GISDB_DB', 'HDX_GISDB_USER', 'HDX_GISDB_PASS']
-    gis_db_details = []
-    for env in gis_envs:
-        if isinstance(os.getenv(env), str):
-            gis_db_details.append(os.getenv(env))
-        else:
-            print('Error. Env var', env, 'not found. Exiting.\n')
-            exit(0)
-    return gis_db_details
-
-
-def gis_db_clear():
-    '''empty the gis database'''
-
-    if not query_yes_no('Clearing gis db. Are you sure?', default='no'):
-        print('Nothing changed.')
-        exit(0)
-
-    host, port, db, user, password = gis_init()
-    refresh_pgpass(host=host, port=port, user=user, password=password, verbose=False)
-    # psql -h $HDX_GISDB_ADDR -p $HDX_GISDB_PORT -U $HDX_GISDB_USER $HDX_GISDB_DB -ntc '\dt' | awk -F \|
-    # '{ print $2 }' | sed -e 's/^ //g' | grep -E "^pre_" | more
-    con = db_connect_to_postgres(host=host, port=port, user=user, dbname=db)
-    con.set_isolation_level(0)
-    cur = con.cursor()
-
-    cur.execute('DROP EXTENSION postgis CASCADE;')
-
-    try:
-        query = "SELECT table_name, table_type FROM information_schema.tables WHERE table_schema = 'public';"
-        cur.execute(query)
-        con.commit()
-        rows = cur.fetchall()
-        if len(rows) > 1:
-            print('Removing', len(rows), 'tables...')
-        for row in rows:
-            table_name, table_type = row
-            if table_type == 'BASE TABLE':
-                query = "DROP TABLE " + row[0] + " CASCADE;"
-                cur.execute(query)
-            else:
-                print('Not a table... What could it be?. Skipping.')
-
-        cur.execute('CREATE EXTENSION postgis;')
-        cur.execute('CREATE EXTENSION postgis_topology;')
-
-    except:
-        print("I can't query that")
-        exit(2)
-    finally:
-        con.close()
-
-
-def gis_restore():
-    gis_db_clear()
-    host, port, db, user, password = gis_init()
-
-    archive_name = '/srv/backup/gis.plsql.gz'
-    filename = '/srv/backup/gis.plsql'
-
-    decompress_file(archive_name, filename, False)
-
-    print('Restoring database', db, 'from', filename)
-    print('Please wait. This may take a while...')
-    cmd = ['pg_restore', '-vOx', '-h', host, '-p', port, '-U', user, '-d', db, filename]
-    # print(cmd)
-    with open(os.devnull, 'wb') as devnull:
-        subprocess.call(cmd, stdout=devnull, stderr=subprocess.STDOUT)
-    db_restore(host=host, port=port, user=user, db=db, filename='/srv/backup/gis.psql')
-
-
-def gis_backup(verbose=True):
-    '''wrapper for backup_db for now'''
-    host, port, db, user, password = gis_init()
-    refresh_pgpass(host=host, port=port, user=user, password=password, verbose=False)
-    backup_db(host=host, port=port, user=user, db=db, prefix=BACKUP['DB_PREFIX'], verbose=True)
-
-
 def backup_db(host=SQL['HOST'], port=SQL['PORT'], user=SQL['USER'], db='', prefix='', verbose=True):
     if not db or not prefix:
         print('backup_db called with empty archive or prefix')
-        exit(0)
+        exiting(0)
     # backup main db
     if not os.path.isdir(BACKUP['DIR']):
         print('Backup directory (' + BACKUP['DIR'] + ') does not exists.')
-        exit(0)
+        exiting(0)
     archive_name = BACKUP['DIR'] + '/' + prefix + '.' + db + '.' + SUFFIX + '.plsql'
     if verbose:
         sys.stdout.write('Archiving ' + db + ' db under ' + archive_name + '.gz\n')
@@ -631,7 +428,7 @@ def backup_filestore(verbose=True):
     # backup filestore
     if not os.path.isdir(BACKUP['DIR']):
         print('Backup directory (' + BACKUP['DIR'] + ') does not exists.')
-        exit(0)
+        exiting(0)
     filestore_archive = BACKUP['DIR'] + '/' + BACKUP['FILESTORE_PREFIX'] + '.' + SUFFIX + '.tar'
     if verbose:
         sys.stdout.write('Archiving filestore from ' + BACKUP['FILESTORE_DIR'] + ' under ' + filestore_archive + '\n')
@@ -652,12 +449,12 @@ def backup_filestore(verbose=True):
     except IOError:
         sys.stdout.write('Filestore content changed while I was reading it... Please try again.\n')
         sys.stdout.flush()
-        exit(0)
+        exiting(0)
     except NameError as err:
         phase, reason = err.args
         sys.stdout.write('An error has occured: ' + reason + '\n')
         sys.stdout.flush()
-        exit(0)
+        exiting(0)
     else:
         tar.close()
         if verbose:
@@ -669,7 +466,7 @@ def backup_filestore(verbose=True):
         else:
             sys.stdout.write(filestore_archive + 'not found\n')
             sys.stdout.flush()
-            exit(0)
+            exiting(0)
 
 
 def decompress_file(f_in='', f_out='', remove=False):
@@ -715,11 +512,11 @@ def db_test_refresh():
 
 
 def db_connect_to_postgres(host=SQL['HOST'], port=SQL['PORT'], dbname='postgres', user=SQL['SUPERUSER']):
-    try:
-        con = psycopg2.connect(host=host, port=port, database=dbname, user=user)
-    except:
-        print("I am unable to connect to the database, exiting.")
-        exit(2)
+    # try:
+    con = psycopg2.connect(host=host, port=port, database=dbname, user=user)
+    # except:
+    #     print("I am unable to connect to the database, exiting.")
+    #     exiting(2)
     return con
 
 
@@ -753,9 +550,30 @@ def db_create(dbname, owner=SQL['USER']):
         print('Database ' + dbname + ' has been created.')
     except:
         print("I can't create database " + dbname)
-        exit(2)
+        exiting(2)
     finally:
         con.close()
+
+
+def deploy():
+    control('stop')
+    print('changing dir to', BASEDIR)
+    os.chdir(BASEDIR)
+    #print('fetching branch or tag', BRANCH)
+    #cmd_line = ['git', 'fetch', 'origin', BRANCH]
+    print('fetching branches and tags')
+    cmd_line = ['git', 'fetch']
+    subprocess.call(cmd_line)
+    print('hopping onto', BRANCH)
+    cmd_line = ['git', 'checkout', BRANCH]
+    subprocess.call(cmd_line)
+    print("pulling latest changes of ", BRANCH)
+    cmd_line = ['git', 'pull', 'origin', BRANCH]
+    subprocess.call(cmd_line)
+    print('done. starting', APP)
+    control('start')
+    if (len(opts) != 0) and (opts[0] == 'test'):
+        tests()
 
 
 def feature():
@@ -767,6 +585,193 @@ def feature():
     print('Fixing permissions on feature-index.js...')
     feature_index_file = os.path.join(BASEDIR, 'ckanext-hdx_theme/ckanext/hdx_theme/fanstatic/search/feature-index.js')
     os.chown(feature_index_file, 33, 0)
+    print('Done.')
+
+
+def filestore_restore(ts=TODAY, server=RESTORE['SERVER'], directory=RESTORE['DIR'], user=RESTORE['USER'], clean=False):
+    # print('This doesn\'t do anything right now...')
+    # exiting(0)
+    line = ["rsync", "-a", "--progress", user + '@' + server + ':' + directory + '/' + RESTORE['FILESTORE_PREFIX'] + '*' + ts + '*', RESTORE['TMP_DIR'] + '/']
+    # if os.path.isdir(RESTORE['TMP_DIR']):
+    #     for the_file in os.listdir(RESTORE['TMP_DIR']):
+    #         file_path = os.path.join(RESTORE['TMP_DIR'], the_file)
+    #         try:
+    #             # if os.path.isfile(file_path):
+    #             os.unlink(file_path)
+    #         except Exception as e:
+    #             print(e)
+    #     #rmtree(RESTORE['TMP_DIR'])
+    # else:
+    os.makedirs(RESTORE['TMP_DIR'], exist_ok=True)
+    print('Getting the filestore archive...')
+    try:
+        result = subprocess.call(line, stderr=subprocess.STDOUT)
+    except subprocess.CalledProcessError as exc:
+        print('+++++++++++++++++++++++++++++++++++++++++++++++++++++')
+        print("Can't find archive from", ts, "or can't connect.")
+        print('The error encountered was:')
+        print('+++++++++++++++++++++++++++++++++++++++++++++++++++++')
+        print(str(exc.output.decode("utf-8").strip()))
+        print('+++++++++++++++++++++++++++++++++++++++++++++++++++++')
+        # q = 'Would you like to get anothr backup?'
+        # if not query_yes_no(q, default='no'):
+        #     print("Aborting restore operation.")
+        #     exiting(0)
+        print('try another timestamp')
+        return False
+    print('Done.')
+    #tfilename =  os.path.join(RESTORE['TMP_DIR'], os.listdir(RESTORE['TMP_DIR'])[0])
+    # changed per Steven Merrill suggestion
+    tf = []
+    for f in os.listdir(RESTORE['TMP_DIR']):
+        if re.search('.tar.gz$', f):
+            tf.append(f)
+    #tf = [f in os.listdir(RESTORE['TMP_DIR']) if re.search('.tpl$', f)]
+    tfilename = os.path.join(RESTORE['TMP_DIR'], tf[0])
+    if tarfile.is_tarfile(tfilename):
+        if clean:
+            filestore_dir = BACKUP['FILESTORE_DIR']
+            for root, dirs, files in os.walk(filestore_dir, topdown=False):
+                for item in files:
+                    try:
+                        os.remove(os.path.join(root, item))
+                    except Exception as e:
+                        print(e)
+                        print('error removing ' + item)
+                if root != filestore_dir:
+                    try:
+                        os.rmdir(root)
+                    except Exception as e:
+                        print(e)
+                        print('error removing ' + root)
+
+                        # for the_file in os.listdir(filestore_dir):
+            #     file_path = os.path.join(filestore_dir, the_file)
+            #     try:
+                    # if os.path.isfile(file_path):
+                    # os.unlink(file_path)
+                # except Exception as e:
+                #     print(e)
+            # rmtree('/srv/filestore')
+            # os.makedirs('/srv/filestore', exist_ok=True)
+            # exiting(0)
+        tfile = tarfile.open(tfilename, 'r:gz')
+        print('Restoring filestore from ' + tfilename)
+        print('It will take a while...')
+        try:
+            tfile.extractall('/srv')
+        except:
+            print('some error occured. bailing out...')
+            exiting(0)
+    else:
+        print(tfilename + ' is not a valid archive.')
+        exiting(0)
+    print('Fixing permissions on filestore')
+    for root, dirs, files in os.walk(BACKUP['FILESTORE_DIR']):
+        for item in dirs:
+            os.chown(os.path.join(root, item), 33, 33)
+            os.chmod(os.path.join(root, item), 0o755)
+        for item in files:
+            os.chown(os.path.join(root, item), 33, 33)
+            os.chmod(os.path.join(root, item), 0o644)
+    print('All done! Please do not forget to remove the archives in ' + RESTORE['TMP_DIR'])
+
+
+def gis_init():
+    gis_envs = ['HDX_GISDB_ADDR', 'HDX_GISDB_PORT', 'HDX_GISDB_DB', 'HDX_GISDB_USER', 'HDX_GISDB_PASS']
+    gis_db_details = []
+    for env in gis_envs:
+        if isinstance(os.getenv(env), str):
+            gis_db_details.append(os.getenv(env))
+        else:
+            print('Error. Env var', env, 'not found. Exiting.\n')
+            exiting(0)
+    return gis_db_details
+
+
+def gis_db_clear():
+    '''empty the gis database'''
+
+    if not query_yes_no('Clearing gis db. Are you sure?', default='no'):
+        print('Nothing changed.')
+        exiting(0)
+
+    host, port, db, user, password = gis_init()
+    refresh_pgpass(host=host, port=port, user=user, password=password, verbose=False)
+    # psql -h $HDX_GISDB_ADDR -p $HDX_GISDB_PORT -U $HDX_GISDB_USER $HDX_GISDB_DB -ntc '\dt' | awk -F \|
+    # '{ print $2 }' | sed -e 's/^ //g' | grep -E "^pre_" | more
+    con = db_connect_to_postgres(host=host, port=port, user=user, dbname=db)
+    con.set_isolation_level(0)
+    cur = con.cursor()
+
+    cur.execute('DROP EXTENSION postgis CASCADE;')
+
+    try:
+        query = "SELECT table_name, table_type FROM information_schema.tables WHERE table_schema = 'public';"
+        cur.execute(query)
+        con.commit()
+        rows = cur.fetchall()
+        if len(rows) > 1:
+            print('Removing', len(rows), 'tables...')
+        for row in rows:
+            table_name, table_type = row
+            if table_type == 'BASE TABLE':
+                query = "DROP TABLE " + row[0] + " CASCADE;"
+                cur.execute(query)
+            else:
+                print('Not a table... What could it be?. Skipping.')
+
+        cur.execute('CREATE EXTENSION postgis;')
+        cur.execute('CREATE EXTENSION postgis_topology;')
+
+    except:
+        print("I can't query that")
+        exiting(2)
+    finally:
+        con.close()
+
+
+def gis_restore():
+    gis_db_clear()
+    host, port, db, user, password = gis_init()
+
+    archive_name = '/srv/backup/gis.plsql.gz'
+    filename = '/srv/backup/gis.plsql'
+
+    decompress_file(archive_name, filename, False)
+
+    print('Restoring database', db, 'from', filename)
+    print('Please wait. This may take a while...')
+    cmd = ['pg_restore', '-vOx', '-h', host, '-p', port, '-U', user, '-d', db, filename]
+    # print(cmd)
+    with open(os.devnull, 'wb') as devnull:
+        subprocess.call(cmd, stdout=devnull, stderr=subprocess.STDOUT)
+    db_restore(host=host, port=port, user=user, db=db, filename='/srv/backup/gis.psql')
+
+
+def gis_backup(verbose=True):
+    '''wrapper for backup_db for now'''
+    host, port, db, user, password = gis_init()
+    refresh_pgpass(host=host, port=port, user=user, password=password, verbose=False)
+    backup_db(host=host, port=port, user=user, db=db, prefix=BACKUP['DB_PREFIX'], verbose=True)
+
+
+def less_compile():
+    cmd = ['paster', '--plugin=ckanext-hdx_theme', 'custom-less-compile', '-c', INI_FILE]
+    os.chdir(BASEDIR)
+    less_wr_dirs = ["ckanext-hdx_theme/ckanext/hdx_theme/public/css/generated", "/srv/ckan/ckanext-hdx_theme/ckanext/hdx_theme/less/tmp"]
+    # for location in less_wr_dirs:
+    os.makedirs(RESTORE['TMP_DIR'], exist_ok=True)
+    print('Compiling...')
+    subprocess.call(cmd)
+    print('Fixing permissions on writeable folders...')
+    for location in less_wr_dirs:
+        os.chown(location, 33, 0)
+        for root, dirs, files in os.walk(os.path.join(BASEDIR, location)):
+            for item in dirs:
+                os.chown(os.path.join(root, item), 33, 0)
+            for item in files:
+                os.chown(os.path.join(root, item), 33, 0)
     print('Done.')
 
 
@@ -786,7 +791,7 @@ def refresh_pgpass(host=SQL['HOST'], port=SQL['PORT'], user=SQL['SUPERUSER'], pa
                 if correct_line == line:
                     if verbose:
                         print("The pgpass file has the right content.")
-                    # exit(0)
+                    # exiting(0)
                     return True
                 if partial_line not in line:
                     newpgpass.append(line)
@@ -806,7 +811,7 @@ def refresh_pgpass(host=SQL['HOST'], port=SQL['PORT'], user=SQL['SUPERUSER'], pa
 
 
 def reinstall_plugins():
-    path = '/srv/ckan'
+    path = BASEDIR
     cmd = ['python', 'setup.py']
     if len(opts) == 1:
         if opts.pop(0) in ['dev', 'develop']:
@@ -852,25 +857,6 @@ def solr_reindex():
     subprocess.call(cmd)
 
 
-def less_compile():
-    cmd = ['paster', '--plugin=ckanext-hdx_theme', 'custom-less-compile', '-c', INI_FILE]
-    os.chdir(BASEDIR)
-    less_wr_dirs = ["ckanext-hdx_theme/ckanext/hdx_theme/public/css/generated", "/srv/ckan/ckanext-hdx_theme/ckanext/hdx_theme/less/tmp"]
-    for location in less_wr_dirs:
-        os.makedirs(RESTORE['TMP_DIR'], exist_ok=True)
-    print('Compiling...')
-    subprocess.call(cmd)
-    print('Fixing permissions on writeable folders...')
-    for location in less_wr_dirs:
-        os.chown(location, 33, 0)
-        for root, dirs, files in os.walk(os.path.join(BASEDIR, location)):
-            for item in dirs:
-                os.chown(os.path.join(root, item), 33, 0)
-            for item in files:
-                os.chown(os.path.join(root, item), 33, 0)
-    print('Done.')
-
-
 def show_logs():
     logs = ['/var/log/ckan/ckan.access.log', '/var/log/ckan/ckan.error.log', '/var/log/ckan/ckan.pain.log']
     if len(opts) == 1:
@@ -896,22 +882,22 @@ def show_logs():
 
 def sysadmin():
     if len(opts) == 0:
-        exit(1)
+        exiting(1)
     subcmd = opts.pop(0)
     subcmds = ['enable', 'disable', 'list']
     if subcmd not in subcmds:
         print(subcmd + ' not implemented yet. Exiting.')
-        exit(1)
+        exiting(1)
     if subcmd == 'list':
         sysadmins_list()
-        exit(0)
+        exiting(0)
     if len(opts) == 0:
         print('No user has been specified. Exiting.')
-        exit(1)
+        exiting(1)
     user = opts.pop(0)
     if not user_exists(user):
         print('User ' + user + ' has not been found.')
-        exit(1)
+        exiting(1)
     if subcmd == 'enable':
         sysadmin_enable(user)
     else:
@@ -921,22 +907,22 @@ def sysadmin():
 def sysadmin_enable(user):
     if is_sysadmin(user):
         print('User ' + user + ' is already sysadmin.')
-        exit(0)
+        exiting(0)
     cmd = ['paster', 'sysadmin', 'add', user, '-c', INI_FILE]
     os.chdir(BASEDIR)
     subprocess.call(cmd)
-    exit(0)
+    exiting(0)
 
 
 def sysadmin_disable(user):
     if not is_sysadmin(user):
         print('User ' + user + ' is not sysadmin.')
-        exit(0)
+        exiting(0)
     cmd = ['paster', 'sysadmin', 'remove', user, '-c', INI_FILE]
     os.chdir(BASEDIR)
     subprocess.call(cmd)
     print('User ' + user + " has been (hopefully) made sysadmin (paster doesn't return anything useful)")
-    exit(0)
+    exiting(0)
 
 
 def sysadmins_list():
@@ -950,12 +936,12 @@ def sysadmins_list():
         rows = cur.fetchall()
     except:
         print("I can't query that")
-        exit(2)
+        exiting(2)
     finally:
         con.close()
 
     user_pretty_list(rows)
-    exit(0)
+    exiting(0)
 
 
 def is_sysadmin(user):
@@ -969,7 +955,7 @@ def is_sysadmin(user):
         rows = cur.fetchall()
     except:
         print("I can't query that")
-        exit(2)
+        exiting(2)
     finally:
         con.close()
     if len(rows) == 1:
@@ -979,10 +965,20 @@ def is_sysadmin(user):
     return False
 
 
-def tracking_update():
-    cmd = ['paster', 'tracking', 'update', '-c', INI_FILE]
+def tests():
+    db_test_refresh()
     os.chdir(BASEDIR)
-    subprocess.call(cmd)
+    # get hdx plugin list
+    dirs = sorted(os.listdir('.'))
+    res = 0
+    for dirname in dirs:
+        if dirname.startswith('ckanext-hdx_'):
+            print("++++++++++++++++++++++++++++++++++++++++++++++++++++")
+            print("Running tests for plugin", dirname)
+            res += tests_nose(dirname)
+    if res:
+        print(" FAILURES: ", res)
+    exit(res)
 
 
 def tests_nose(dirname):
@@ -998,7 +994,14 @@ def tests_nose(dirname):
             loglevel = opt
     test_call = ['nosetests', '-ckan', '--with-xunit', xunit_file, '--logging-level', loglevel, pylons, tests]
     os.chdir(BASEDIR)
-    subprocess.call(test_call)
+    # I need to return this for jenkins
+    return subprocess.call(test_call)
+
+
+def tracking_update():
+    cmd = ['paster', 'tracking', 'update', '-c', INI_FILE]
+    os.chdir(BASEDIR)
+    subprocess.call(cmd)
 
 
 def update():
@@ -1008,25 +1011,25 @@ def update():
         subprocess.call(line)
     except:
         print('Update failed.')
-        exit(1)
+        exiting(1)
     else:
         print('Update completed.')
 
 
 def users():
     if len(opts) == 0:
-        exit(1)
+        exiting(1)
     subcmd = opts.pop(0)
     subcmds = ['add', 'delete', 'list', 'search', 'show']
     if subcmd not in subcmds:
         print(subcmd + ' not implemented yet. Exiting.')
-        exit(1)
+        exiting(1)
     if subcmd == 'list':
         users_list()
-        exit(0)
+        exiting(0)
     if len(opts) == 0:
         print('No user has been specified. Exiting.')
-        exit(1)
+        exiting(1)
     user = opts.pop(0)
     if subcmd == 'add':
         if user_exists(user):
@@ -1045,7 +1048,7 @@ def users():
             user_show(user)
     elif subcmd == 'search':
         user_search(user)
-    exit(0)
+    exiting(0)
 
 
 def users_list():
@@ -1059,7 +1062,7 @@ def users_list():
         rows = cur.fetchall()
     except:
         print("I can't query that")
-        exit(2)
+        exiting(2)
     finally:
         con.close()
 
@@ -1077,7 +1080,7 @@ def user_show(user):
         rows = cur.fetchall()
     except:
         print("I can't query that")
-        exit(2)
+        exiting(2)
     finally:
         con.close()
 
@@ -1095,12 +1098,12 @@ def user_search(user):
         rows = cur.fetchall()
     except:
         print("I can't query that")
-        exit(2)
+        exiting(2)
     finally:
         con.close()
     if len(rows) == 0:
         print('No users were found searching for ' + user)
-        exit(0)
+        exiting(0)
     user_pretty_list(rows)
 
 
@@ -1116,7 +1119,7 @@ def user_add(user):
         user_show(user)
     else:
         print('I could not create the user ' + user)
-    exit(0)
+    exiting(0)
 
 
 def user_delete(user):
@@ -1152,7 +1155,7 @@ def user_exists(user):
         rows = cur.fetchall()
     except:
         print("I can't query that")
-        exit(2)
+        exiting(2)
     finally:
         con.close()
 
@@ -1162,7 +1165,7 @@ def user_exists(user):
         return False
 
 
-def exit(code=0):
+def exiting(code=0):
     if code == 1:
         show_usage()
     os.chdir(CURRPATH)
@@ -1199,9 +1202,9 @@ def main():
             elif opts[0] == 'gis':
                 gis_backup()
             else:
-                exit(1)
+                exiting(1)
         else:
-            exit(1)
+            exiting(1)
     elif cmd in no_subcommands_list:
         control(cmd)
     elif cmd == 'reindex':
@@ -1230,14 +1233,14 @@ def main():
             elif opts[0] == 'cleanup':
                 restore_cleanup()
             else:
-                exit(1)
+                exiting(1)
         else:
-            exit(1)
+            exiting(1)
     elif cmd == 'less':
         if len(opts) == 1 and opts[0] == 'compile':
             less_compile()
         else:
-            exit(1)
+            exiting(1)
     elif cmd == 'log':
         show_logs()
     elif cmd == 'sysadmin':
@@ -1251,7 +1254,7 @@ def main():
     elif cmd == 'update':
         update()
     else:
-        exit(1)
+        exiting(1)
 
 
 if __name__ == '__main__':
@@ -1259,5 +1262,5 @@ if __name__ == '__main__':
     script = opts.pop(0)
     # print(os.path.realpath(__file__))
     if len(opts) == 0:
-        exit(1)
+        exiting(1)
     main()
