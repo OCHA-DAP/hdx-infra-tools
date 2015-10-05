@@ -507,8 +507,9 @@ def compress_file(f_in='', f_out='', remove=False):
 
 def db_test_refresh():
     for dbname in [SQL['DB_TEST'], SQL['DB_DATASTORE_TEST']]:
-        db_drop(dbname)
-        db_create(dbname)
+        # db_drop(dbname)
+        # db_create(dbname)
+        db_empty(dbname)
 
 
 def db_connect_to_postgres(host=SQL['HOST'], port=SQL['PORT'], dbname='postgres', user=SQL['SUPERUSER']):
