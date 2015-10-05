@@ -520,6 +520,29 @@ def db_connect_to_postgres(host=SQL['HOST'], port=SQL['PORT'], dbname='postgres'
     return con
 
 
+def db_empty(dbname):
+    '''removes all tables from a database'''
+    try:
+        con = db_connect_to_postgres(dbname=dbname)
+    except:
+        print("Can't connect to the database" + dbname)
+        con.close()
+        exiting(2)
+
+    #con.set_isolation_level(0)
+    cur = con.cursor()
+    drop_db = 'drop schema public cascade; create schema public;'
+    # print(drop_db)
+
+    try:
+        cur.execute(drop_db)
+        print('Database ' + dbname + ' has been flushed.')
+    except:
+        print("I can't flush database " + dbname)
+    finally:
+        con.close()
+
+
 def db_drop(dbname):
     con = db_connect_to_postgres()
     con.set_isolation_level(0)
