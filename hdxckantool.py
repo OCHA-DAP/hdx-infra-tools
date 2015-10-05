@@ -545,14 +545,15 @@ def db_create(dbname, owner=SQL['USER']):
     create_db = 'CREATE DATABASE ' + dbname + ' OWNER ' + owner
     options = " ENCODING 'UTF-8' LC_COLLATE 'en_US.UTF-8' LC_CTYPE 'en_US.UTF-8'"
     # print(create_db + options)
-    try:
-        cur.execute(create_db + options)
-        print('Database ' + dbname + ' has been created.')
-    except:
-        print("I can't create database " + dbname)
-        exiting(2)
-    finally:
-        con.close()
+    cur.execute(create_db + options)
+    # try:
+    #     cur.execute(create_db + options)
+    #     print('Database ' + dbname + ' has been created.')
+    # except:
+    #     print("I can't create database " + dbname)
+    #     exiting(2)
+    # finally:
+    #     con.close()
 
 
 def deploy():
