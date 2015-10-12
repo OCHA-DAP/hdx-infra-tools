@@ -79,11 +79,11 @@ def show_usage():
             WIP [tags/tag]- deploy a certain tag
             WIP [branch]  - deploy a certain branch
         pgpass        - create the pgpass entry required to operate on postgres
-        restart       - restart ckan service
+        restart       - restart cps service
         restore
             cleanup   - remove temporary folder used for restore
-        start         - start ckan service
-        stop          - stop ckan service
+        start         - start cps service
+        stop          - stop cps service
         update        - update this tool (directly from repo source)
     """
     print(doc)
