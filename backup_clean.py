@@ -8,7 +8,8 @@ import sys
 import os
 import datetime
 
-BACKUP_FOLDER = '/opt/backup/'    # location of the backup files
+#BACKUP_FOLDER = '/opt/backup/'    # location of the backup files
+BACKUP_FOLDER = 'test-backup/'    # location of the backup files
 PREFIX = ''                       # optional prefix to filter the backups to be removed (e.g prod.ckan.files)
 YEARLY = 10                       # how many yearly backups we keep?
 MONTHLY = 13                      # how many monthly backups we keep?
