@@ -9,5 +9,6 @@
 [ -z $TODAY ]               && exit 1
 
 rsync -av --progress --bwlimit=$BWLIMIT \
+    -e 'ssh -oStrictHostKeyChecking=no' \
     $HDX_BACKUP_DIR/*$TODAY* \
     $HDX_BACKUP_USER@$HDX_BACKUP_SERVER:$HDX_BACKUP_BASE_DIR/$HDX_TYPE/
