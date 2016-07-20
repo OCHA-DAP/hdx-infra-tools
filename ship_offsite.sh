@@ -8,6 +8,8 @@
 [ -z $BWLIMIT ]             && exit 1
 [ -z $TODAY ]               && exit 1
 
+/srv/tools/helper.sh
+
 rsync -av --progress --bwlimit=$BWLIMIT \
     -e 'ssh -oStrictHostKeyChecking=no' \
     $HDX_BACKUP_DIR/*$TODAY* \
