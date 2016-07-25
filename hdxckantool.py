@@ -271,15 +271,20 @@ def db_list_backups(listonly=True, ts=TODAY, server=RESTORE['SERVER'], directory
     print(server)
     print(directory)
     print(RESTORE['DB_PREFIX'])
+    connection_details = [user, '@', server, ':', directory, '/',
+                          RESTORE['DB_PREFIX'], '*']
+
+    if ts:
+        connection_details.extend([str(ts), '*'])
     if listonly:
-        line = ["rsync", '--list-only', user + '@' + server + ':' + directory + '/' + RESTORE['DB_PREFIX'] + '*' + ts + '*']
+        line = ["rsync", '--list-only', ''.join(connection_details)]
     else:
-        line = ["rsync", "-a", "--progress", user + '@' + server + ':' + directory + '/' + RESTORE['DB_PREFIX'] + '*' + ts + '*', RESTORE['TMP_DIR'] + '/']
+        line = ["rsync", "-a", "--progress", ''.join(connection_details),
+                RESTORE['TMP_DIR'] + '/']
         # empty the temp dir first.
         if os.path.isdir(RESTORE['TMP_DIR']):
             rmtree(RESTORE['TMP_DIR'])
         os.makedirs(RESTORE['TMP_DIR'], exist_ok=True)
-    # print(str(line))
     try:
         if listonly:
             result = subprocess.check_output(line, stderr=subprocess.STDOUT)
@@ -308,7 +313,7 @@ def db_list_backups(listonly=True, ts=TODAY, server=RESTORE['SERVER'], directory
 
 
 def db_get_last_backups():
-    list = db_list_backups().split('\n')
+    list = db_list_backups(ts=None).split('\n')
     list_db = []
     list_db_datastore = []
     for line in list:
@@ -322,7 +327,7 @@ def db_get_last_backups():
     # print(list_db_datastore)
     backup = []
     ts = ''
-    for db_name in list_db:
+    for db_name in sorted(list_db, reverse=True):
         # print(db_name)
         ts = db_name.split('.')[4]
         for db_datastore_name in list_db_datastore:
@@ -341,7 +346,7 @@ def db_get_last_backups():
     print(backup[0])
     print(backup[1])
     print('+++++++++++++++++++++++++++++++++++++++++++++++++++++')
-    db_list_backups(False, ts)
+    db_list_backups(False, ts=ts)
     print('+++++++++++++++++++++++++++++++++++++++++++++++++++++')
     print('Done. Backups are available in', RESTORE['TMP_DIR'])
     print('+++++++++++++++++++++++++++++++++++++++++++++++++++++')
