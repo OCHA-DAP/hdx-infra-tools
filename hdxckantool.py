@@ -617,11 +617,30 @@ def feature():
     os.chown(feature_index_file, 33, 0)
     print('Done.')
 
+def get_last_ts(text):
+    text = text.rstrip()
+    arr = text.decode("utf-8").split('\n')
+    tss = []
+    for item in arr:
+        archive_name = item.split().pop()
+        ts = archive_name.split('.')[-3]
+        tss.append(ts)
+    result = sorted(tss).pop()
+    return result
+
 
 def filestore_restore(ts=TODAY, server=RESTORE['SERVER'], directory=RESTORE['DIR'], user=RESTORE['USER'], clean=False):
     # print('This doesn\'t do anything right now...')
     # exiting(0)
-    line = ["rsync", "-a", "--progress", user + '@' + server + ':' + directory + '/' + RESTORE['FILESTORE_PREFIX'] + '*' + ts + '*', RESTORE['TMP_DIR'] + '/']
+    connection_details = [user, '@', server, ':', directory, '/',
+                          RESTORE['FILESTORE_PREFIX'], '*']
+
+    line = ["rsync", "--list-only", ''.join(connection_details)]
+    ts = subprocess.check_output(line, stderr=subprocess.STDOUT)
+    ts = get_last_ts(ts)
+    connection_details.extend([ts, '*'])
+    line = ["rsync", "-a", "--progress", ''.join(connection_details),
+            RESTORE['TMP_DIR'] + '/']
     # if os.path.isdir(RESTORE['TMP_DIR']):
     #     for the_file in os.listdir(RESTORE['TMP_DIR']):
     #         file_path = os.path.join(RESTORE['TMP_DIR'], the_file)
@@ -633,7 +652,7 @@ def filestore_restore(ts=TODAY, server=RESTORE['SERVER'], directory=RESTORE['DIR
     #     #rmtree(RESTORE['TMP_DIR'])
     # else:
     os.makedirs(RESTORE['TMP_DIR'], exist_ok=True)
-    print('Getting the filestore archive...')
+    print('Getting the filestore archive with timestamp', ts, '...')
     try:
         result = subprocess.call(line, stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError as exc:
