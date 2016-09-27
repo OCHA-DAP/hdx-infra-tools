@@ -57,10 +57,9 @@ def main():
     print('Creating daily fake backups...'),
     createBackupFiles(genDaysList())
     print('done.')
-    print('Creating hourly fake backups...'),
-    createBackupFiles(genHoursList())
+    # print('Creating hourly fake backups...'),
+    # createBackupFiles(genHoursList())
     print('done.')
 
 if __name__ == '__main__':
     main()
-
