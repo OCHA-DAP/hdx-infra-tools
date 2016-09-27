@@ -134,12 +134,15 @@ class BackupCleaner(object):
 if __name__ == '__main__':
     pretend = True
     verbose = True
+    folder = '.'
     if len(sys.argv):
         for arg in sys.argv:
             if arg == '-f':
                 pretend = False
-            if arg == '-q':
+            elif arg == '-q':
                 verbose = False
+            elif os.path.isdir(arg):
+                folder = arg
 
-    cleaner = BackupCleaner()
+    cleaner = BackupCleaner(folder=folder)
     cleaner.clean_folder(pretend=pretend, verbose=verbose)
