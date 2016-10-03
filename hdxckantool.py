@@ -201,7 +201,7 @@ def control(cmd):
         exiting(1)
 
 
-def db():
+def db_submenu():
     # db
     #  clean
     #  get snapshot
@@ -1201,7 +1201,7 @@ def main():
     cmd = opts.pop(0)
     no_subcommands_list = ['restart', 'start', 'status', 'stop']
     if cmd == 'db':
-        db()
+        db_submenu()
     elif cmd == 'deploy':
         deploy()
     elif cmd == 'feature':
