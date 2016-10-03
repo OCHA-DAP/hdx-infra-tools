@@ -1030,7 +1030,7 @@ def tracking_update():
 
 
 def update():
-    srcfile = 'https://bitbucket.org/teodorescuserban/hdx-tools/raw/master/hdxckantool.py'
+    srcfile = 'https://raw.githubusercontent.com/OCHA-DAP/hdx-tools/master/hdxckantool.py'
     line = ['curl', '-s', '-o', os.path.realpath(__file__), srcfile]
     try:
         subprocess.call(line)
