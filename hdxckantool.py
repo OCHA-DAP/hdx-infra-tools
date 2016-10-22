@@ -20,6 +20,9 @@ BACKUP_AS = 'dev'
 if isinstance(os.getenv('HDX_TYPE'), str):
     BACKUP_AS = os.getenv('HDX_TYPE')
 INI_FILE = "/srv/prod.ini"
+if isinstance(os.getenv('INI_FILE'), str):
+    INI_FILE = os.getenv('INI_FILE')
+
 TS = ''
 
 SQL = dict(
