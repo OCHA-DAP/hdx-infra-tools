@@ -26,8 +26,8 @@ if isinstance(os.getenv('INI_FILE'), str):
 TS = ''
 
 SQL = dict(
-    SUPERUSER="ckan", HOST=str(os.getenv('HDX_CKANDB_ADDR')),
-    PORT=str(os.getenv('HDX_CKANDB_PORT')),
+    SUPERUSER="ckan", HOST='dbckan',
+    PORT='5432',
     USER=str(os.getenv('HDX_CKANDB_USER')),
     PASSWORD=str(os.getenv('HDX_CKANDB_PASS')),
     DB=str(os.getenv('HDX_CKANDB_DB')),
@@ -706,8 +706,8 @@ def filestore_restore(ts=TODAY, server=RESTORE['SERVER'], directory=RESTORE['DIR
 
 
 def gis_init():
-    gis_envs = ['HDX_GISDB_ADDR', 'HDX_GISDB_PORT', 'HDX_GISDB_DB', 'HDX_GISDB_USER', 'HDX_GISDB_PASS']
-    gis_db_details = []
+    gis_envs = ['HDX_GISDB_DB', 'HDX_GISDB_USER', 'HDX_GISDB_PASS']
+    gis_db_details = ['gisdb', '5432']
     for env in gis_envs:
         if isinstance(os.getenv(env), str):
             gis_db_details.append(os.getenv(env))
