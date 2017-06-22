@@ -36,6 +36,11 @@ SQL = dict(
     DB_TEST='ckan_test', DB_DATASTORE_TEST='datastore_test'
 )
 
+if isinstance(os.getenv('HDX_CKANDB_DB_TEST'), str):
+    SQL['DB_TEST'] = os.getenv('HDX_CKANDB_DB_TEST')
+if isinstance(os.getenv('HDX_CKANDB_DB_TEST_DATASTORE'), str):
+    SQL['DB_DATASTORE_TEST'] = os.getenv('HDX_CKANDB_DB_TEST_DATASTORE')
+
 # to get the snapshot
 RESTORE = dict(
     FROM='prod',
