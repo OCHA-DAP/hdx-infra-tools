@@ -101,6 +101,7 @@ def show_usage():
         feature       - hdx-feature-search rebuild
 
         less compile  - compiles less resource defined in prod.ini
+            [verbose] - uses less.ini which is more verbose than prod.ini
 
         log           - shows ALL ckan logs
            noaccess   - shows only error and pain log
@@ -789,7 +790,11 @@ def gis_backup(verbose=True):
     backup_db(host=host, port=port, user=user, db=db, prefix=BACKUP['DB_PREFIX'], verbose=True)
 
 
-def less_compile():
+def less_compile(verbose=False):
+    if verbose:
+        ini_file = '/etc/ckan/less.ini'
+    else:
+        ini_file = INI_FILE
     cmd = ['paster', '--plugin=ckanext-hdx_theme', 'custom-less-compile', '-c', INI_FILE]
     os.chdir(BASEDIR)
     less_wr_dirs = ["ckanext-hdx_theme/ckanext/hdx_theme/public/css/generated", "/srv/ckan/ckanext-hdx_theme/ckanext/hdx_theme/less/tmp"]
@@ -1270,8 +1275,11 @@ def main():
         else:
             exiting(1)
     elif cmd == 'less':
-        if len(opts) == 1 and opts[0] == 'compile':
-            less_compile()
+        if len(opts) == 1 and 'compile' in opts:
+            if 'verbose' in opts:
+                less_compile(verbose=True)
+            else:
+                less_compile()
         else:
             exiting(1)
     elif cmd == 'log':
