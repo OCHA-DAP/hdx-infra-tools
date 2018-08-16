@@ -617,7 +617,11 @@ def feature():
     print('Rebuilding feature index...')
     subprocess.call(cmd)
     print('Fixing permissions on feature-index.js...')
-    feature_index_file = os.path.join(BASEDIR, 'ckanext-hdx_theme/ckanext/hdx_theme/fanstatic/search/feature-index.js')
+    lunr_folder = os.path.join(BASEDIR, 'ckanext-hdx_theme/ckanext/hdx_theme/fanstatic/search/lunr')
+    if os.path.isdir(lunr_folder):
+        feature_index_file = os.path.join(lunr_folder,'feature-index.js')
+    else:
+        feature_index_file = os.path.join(BASEDIR, 'ckanext-hdx_theme/ckanext/hdx_theme/fanstatic/search/feature-index.js')
     os.chown(feature_index_file, 33, 0)
     print('Done.')
 
