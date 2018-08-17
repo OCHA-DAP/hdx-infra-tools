@@ -15,7 +15,7 @@ APP = "ckan"
 BASEDIR = "/srv/ckan"
 if isinstance(os.getenv('HDX_CKAN_BASEDIR'), str):
     BASEDIR = os.getenv('HDX_CKAN_BASEDIR')
-BRANCH = str(os.getenv('HDX_CKAN_BRANCH'))
+# BRANCH = str(os.getenv('HDX_CKAN_BRANCH'))
 BACKUP_AS = 'dev'
 if isinstance(os.getenv('HDX_TYPE'), str):
     BACKUP_AS = os.getenv('HDX_TYPE')
@@ -95,8 +95,8 @@ def show_usage():
             set-perms - restore permissions on datastore side
             get       - get latest snapshot of the databases (ckan and datastore)
 
-        deploy        - just deploy
-            test      - deploy then run tests
+        deploy        - *DISABLED* just deploy
+            test      - *DISABLED* deploy then run tests
 
         feature       - hdx-feature-search rebuild
 
@@ -589,25 +589,25 @@ def db_create(dbname, owner=SQL['USER']):
     #     con.close()
 
 
-def deploy():
-    control('stop')
-    print('changing dir to', BASEDIR)
-    os.chdir(BASEDIR)
-    #print('fetching branch or tag', BRANCH)
-    #cmd_line = ['git', 'fetch', 'origin', BRANCH]
-    print('fetching branches and tags')
-    cmd_line = ['git', 'fetch']
-    subprocess.call(cmd_line)
-    print('hopping onto', BRANCH)
-    cmd_line = ['git', 'checkout', BRANCH]
-    subprocess.call(cmd_line)
-    print("pulling latest changes of ", BRANCH)
-    cmd_line = ['git', 'pull', 'origin', BRANCH]
-    subprocess.call(cmd_line)
-    print('done. starting', APP)
-    control('start')
-    if (len(opts) != 0) and (opts[0] == 'test'):
-        tests()
+# def deploy():
+#     control('stop')
+#     print('changing dir to', BASEDIR)
+#     os.chdir(BASEDIR)
+#     #print('fetching branch or tag', BRANCH)
+#     #cmd_line = ['git', 'fetch', 'origin', BRANCH]
+#     print('fetching branches and tags')
+#     cmd_line = ['git', 'fetch']
+#     subprocess.call(cmd_line)
+#     print('hopping onto', BRANCH)
+#     cmd_line = ['git', 'checkout', BRANCH]
+#     subprocess.call(cmd_line)
+#     print("pulling latest changes of ", BRANCH)
+#     cmd_line = ['git', 'pull', 'origin', BRANCH]
+#     subprocess.call(cmd_line)
+#     print('done. starting', APP)
+#     control('start')
+#     if (len(opts) != 0) and (opts[0] == 'test'):
+#         tests()
 
 
 def feature():
@@ -1219,8 +1219,8 @@ def main():
     no_subcommands_list = ['restart', 'start', 'status', 'stop']
     if cmd == 'db':
         db_submenu()
-    elif cmd == 'deploy':
-        deploy()
+    # elif cmd == 'deploy':
+    #     deploy()
     elif cmd == 'feature':
         feature()
     elif cmd == 'pgpass':
