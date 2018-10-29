@@ -1025,8 +1025,6 @@ def tests():
 
 def tests_nose(dirname):
     plugin = dirname.replace('ckanext-', '')
-    xunit_file = []
-    test_call.extend(xunit_file)
     pylons = '--with-pylons=' + dirname + '/test.ini.sample'
     tests = dirname + '/ckanext/' + plugin + '/tests'
     coverage = '--with-coverage --cover-package=ckanext.hdx_users
