@@ -1025,7 +1025,6 @@ def tests():
 
 def tests_nose(dirname):
     plugin = dirname.replace('ckanext-', '')
-    #test_call = ['nosetests', '-ckan', '--with-xunit', xunit_file, '--nologcapture', pylons, tests]
     loglevel = 'WARNING'
     if len(opts) == 1:
         opt = opts.pop(0)
