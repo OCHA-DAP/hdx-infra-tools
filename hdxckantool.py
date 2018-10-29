@@ -1025,16 +1025,24 @@ def tests():
 
 def tests_nose(dirname):
     plugin = dirname.replace('ckanext-', '')
-    xunit_file = '--xunit-file=' + dirname + '/ckanext/' + plugin + '/tests/nose_results.xml'
+    xunit_file = []
+    test_call.extend(xunit_file)
     pylons = '--with-pylons=' + dirname + '/test.ini.sample'
     tests = dirname + '/ckanext/' + plugin + '/tests'
+    coverage = '--with-coverage --cover-package=ckanext.hdx_users
     #test_call = ['nosetests', '-ckan', '--with-xunit', xunit_file, '--nologcapture', pylons, tests]
     loglevel = 'WARNING'
     if len(opts) == 1:
         opt = opts.pop(0)
         if opt in ['DEBUG', 'INFO', 'CRITICAL']:
             loglevel = opt
-    test_call = ['nosetests', '-ckan', '--with-xunit', xunit_file, '--logging-level', loglevel, pylons, tests]
+    test_call = [
+        'nosetests', '-ckan',
+        '--with-xunit', '--xunit-file=' + dirname + '/ckanext/' + plugin + '/tests/nose_results.xml',
+        '--logging-level', loglevel,
+        '--with-pylons=' + dirname + '/test.ini.sample',
+        '--with-coverage', '--cover-package=ckanext.' + plugin
+    ]
     os.chdir(BASEDIR)
     # I need to return this for jenkins
     return subprocess.call(test_call)
