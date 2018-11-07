@@ -1031,7 +1031,7 @@ def tests_nose(dirname):
         if opt in ['DEBUG', 'INFO', 'CRITICAL']:
             loglevel = opt
     test_call = [
-        'nosetests', '-ckan',
+        'nosetests', '-ckan', dirname + '/ckanext/' + plugin + '/tests',
         '--with-xunit', '--xunit-file=' + dirname + '/ckanext/' + plugin + '/tests/nose_results.xml',
         '--logging-level', loglevel,
         '--with-pylons=' + dirname + '/test.ini.sample',
