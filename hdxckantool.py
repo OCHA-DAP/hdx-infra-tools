@@ -248,27 +248,27 @@ def db_clean(dbckan=SQL['DB'], dbdatastore=SQL['DB_DATASTORE']):
 def db_set_perms():
     con = db_connect_to_postgres(dbname=SQL['DB_DATASTORE'])
     cur = con.cursor()
-    query_list = [
-        'REVOKE CREATE ON SCHEMA public FROM PUBLIC;',
-        'REVOKE USAGE ON SCHEMA public FROM PUBLIC;',
-        'GRANT CREATE ON SCHEMA public TO ' + SQL['USER'] + ';',
-        'GRANT USAGE ON SCHEMA public TO ' + SQL['USER'] + ';',
-        'GRANT CREATE ON SCHEMA public TO ' + SQL['USER'] + ';',
-        'GRANT USAGE ON SCHEMA public TO ' + SQL['USER'] + ';',
-        'REVOKE CONNECT ON DATABASE ' + SQL['DB'] + ' FROM ' + SQL['USER_DATASTORE'] + ';',
-        'GRANT CONNECT ON DATABASE ' + SQL['DB_DATASTORE'] + ' TO ' + SQL['USER_DATASTORE'] + ';',
-        'GRANT USAGE ON SCHEMA public TO ' + SQL['USER_DATASTORE'] + ';',
-        'GRANT SELECT ON ALL TABLES IN SCHEMA public TO ' + SQL['USER_DATASTORE'] + ';',
-        'ALTER DEFAULT PRIVILEGES FOR USER ' + SQL['USER'] + ' IN SCHEMA public GRANT SELECT ON TABLES TO ' + SQL['USER_DATASTORE'] + ';'
-    ]
+
     try:
-        print('restoring proper permissions on db', SQL['USER_DATASTORE'])
-        for query in query_list:
-            # print(query)
-            cur.execute(query)
-        con.commit()
-    except:
-        print("Failed to set proper permissions. Exiting.")
+        print('restoring proper permissions on db', SQL['DB_DATASTORE'])
+
+        with open(os.devnull, 'w') as devnull:
+            query_list = subprocess.check_output(
+                "paster datastore set-permissions -c /etc/ckan/prod.ini",
+                shell=True, stderr=devnull)
+        with open("/srv/datastore_permissions.sql", "w") as file:
+            file.write(query_list.decode('utf-8'))
+            with open(os.devnull, 'w') as devnull:
+                subprocess.check_output(
+                    'PGPASSWORD=' + SQL['PASSWORD'] + 
+                    ' psql -h ' + SQL['HOST'] +
+                    ' -U ' + SQL['USER'] + ' ' + SQL['DB_DATASTORE'] + ' ' +
+                    ' -f /srv/datastore_permissions.sql',
+                    shell=True, stderr=devnull)
+    except Exception as e:
+        print("Failed to set proper permissions.")
+        print(str(e))
+        print("Exiting.")
         exiting(2)
     finally:
         con.close()
@@ -521,7 +521,7 @@ def db_test_refresh():
         db_empty(dbname)
 
 
-def db_connect_to_postgres(host=SQL['HOST'], port=SQL['PORT'], dbname='postgres', user=SQL['SUPERUSER']):
+def db_connect_to_postgres(host=SQL['HOST'], port=SQL['PORT'], dbname=SQL['DB'], user=SQL['SUPERUSER'], password=SQL['PASSWORD']):
     # try:
     con = psycopg2.connect(host=host, port=port, database=dbname, user=user)
     # except:
@@ -968,7 +968,7 @@ def sysadmin_disable(user):
 
 
 def sysadmins_list():
-    con = db_connect_to_postgres(dbname=SQL['DB'])
+    con = db_connect_to_postgres()
     con.set_isolation_level(0)
     cur = con.cursor()
     query = "select name,fullname,email,state,sysadmin from public.user where sysadmin='True' order by name asc;"
@@ -987,7 +987,7 @@ def sysadmins_list():
 
 
 def is_sysadmin(user):
-    con = db_connect_to_postgres(dbname=SQL['DB'])
+    con = db_connect_to_postgres()
     con.set_isolation_level(0)
     cur = con.cursor()
     query = "select sysadmin from public.user where name='" + user + "';"
@@ -1096,7 +1096,7 @@ def users():
 
 
 def users_list():
-    con = db_connect_to_postgres(dbname=SQL['DB'])
+    con = db_connect_to_postgres()
     con.set_isolation_level(0)
     cur = con.cursor()
     query = "select name,fullname,email,state,sysadmin from public.user order by name asc;"
@@ -1114,7 +1114,7 @@ def users_list():
 
 
 def user_show(user):
-    con = db_connect_to_postgres(dbname=SQL['DB'])
+    con = db_connect_to_postgres()
     con.set_isolation_level(0)
     cur = con.cursor()
     query = "select name,fullname,email,state,sysadmin,apikey from public.user where name='" + user + "';"
@@ -1132,7 +1132,7 @@ def user_show(user):
 
 
 def user_search(user):
-    con = db_connect_to_postgres(dbname=SQL['DB'])
+    con = db_connect_to_postgres()
     con.set_isolation_level(0)
     cur = con.cursor()
     query = "select name,fullname,email,state,sysadmin from public.user where name like '%" + user + "%';"
@@ -1189,7 +1189,7 @@ def user_pretty_list(userlist):
 
 
 def user_exists(user):
-    con = db_connect_to_postgres(dbname=SQL['DB'])
+    con = db_connect_to_postgres()
     con.set_isolation_level(0)
     cur = con.cursor()
     query = "select name,fullname,email,state,sysadmin from public.user where name='" + user + "';"
@@ -1227,8 +1227,9 @@ def main():
         feature()
     elif cmd == 'pgpass':
         refresh_pgpass()
-        host, port, db, user, password = gis_init()
-        refresh_pgpass(host=host, port=port, user=user, password=password)
+        # we dont care about gis right now
+        # host, port, db, user, password = gis_init()
+        # refresh_pgpass(host=host, port=port, user=user, password=password)
     elif cmd == 'backup':
         if 'quiet' in opts:
             opts.remove('quiet')
